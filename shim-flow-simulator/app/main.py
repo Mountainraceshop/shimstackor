@@ -302,9 +302,18 @@ def solve_series_flow_for_dp(
     def series_dp_for_q(q_guess: float) -> tuple[float, list[dict]]:
         total_dp = 0.0
         stage_data = []
+        initial_stage_dp = target_dp_pa / max(len(stages), 1)
         for stage in stages:
-            area, lift = stage_dynamic_area_m2(inp, stage, target_dp_pa)
-            dp_stage = orifice_delta_p_pa(q_guess, area, cd, rho)
+            dp_stage = initial_stage_dp
+            area = 1e-12
+            lift = 0.0
+            for _ in range(8):
+                area, lift = stage_dynamic_area_m2(inp, stage, dp_stage)
+                dp_next = orifice_delta_p_pa(q_guess, area, cd, rho)
+                if abs(dp_next - dp_stage) <= max(dp_next, 1.0) * 1e-3:
+                    dp_stage = dp_next
+                    break
+                dp_stage = 0.5 * (dp_stage + dp_next)
             total_dp += dp_stage
             stage_data.append({
                 "name": stage.name,
