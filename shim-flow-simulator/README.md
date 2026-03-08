@@ -1,25 +1,33 @@
-# Shim Calculator Engineering — MVP
+# Shim Calculator Engineering — v2 MVP
 
 A runnable MVP for a physics-led suspension damper simulator.
 
 ## What this build includes
 
-- FastAPI backend
-- Browser UI served by FastAPI
-- Geometry, port area, simple bleed/adjuster modelling
-- Simplified shim-stack opening model
-- Force/pressure/lift/flow-split outputs over shaft velocity
-- Fork air spring / oil height progression estimate
-- Professional engineering-style single-page layout
+- FastAPI backend + browser UI
+- Platform-aware modelling for:
+  - Forks: coil, KYB PSF1, KYB PSF2, Showa air, WP air
+  - Shocks: monotube and twin-tube approximations (e.g. KYB/Showa/WP and Ohlins TTX/K-Tech style)
+- Valve-stage separation:
+  - piston stack
+  - base valve stack
+  - mid-valve stack
+- Low-speed and rebound clicker restriction modelling
+- High-speed poppet/blow-off approximation
+- Port-count and port-diameter based flow capacity
+- Pressure / force / shim-lift / flow-split curves over shaft velocity
+- Reservoir pressure probe and cavitation margin estimate
+- Spring/chamber progression curve for fork and shock modes
+- Dyno CSV parser endpoint and chart overlay in UI
 
 ## What this build does **not** yet include
 
 - Full CFD / FSI
 - Multi-body vehicle dynamics
-- Full dyno CSV import/export
-- Full high-speed poppet dynamics
-- Real shim stress maps
-- Temperature transient solver
+- Full transient (time-domain) valve inertia and hysteresis solver
+- Detailed check-plate contact mechanics
+- Real shim stress/fatigue maps
+- Full temperature transient model
 
 ## Run locally
 
@@ -39,3 +47,11 @@ http://127.0.0.1:8000
 ## Notes
 
 This is a solid scaffold for the engineering product brief and is intended to be extended. The solver is intentionally transparent and heavily commented so it can be tuned against dyno data.
+
+## API endpoints
+
+- `POST /api/simulate`  
+  Runs the physics model and returns summary, compression/rebound velocity curves, and spring/chamber progression.
+
+- `POST /api/parse-dyno-csv`  
+  Accepts `{ "csv_text": "..." }` and parses velocity/force columns for dyno overlay.
