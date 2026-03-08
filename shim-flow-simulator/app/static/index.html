@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shim Calculator Engineering</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root{
+      --bg:#09111f;
+      --panel:#0f1a2d;
+      --panel-2:#14233d;
+      --line:rgba(255,255,255,.09);
+      --text:#eef4ff;
+      --muted:#9fb1d3;
+      --accent:#58a6ff;
+      --ok:#4dd4ac;
+      --warn:#ffd166;
+      --danger:#ff6b6b;
+      --radius:18px;
+      --shadow:0 16px 42px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#07101d,#0b1527 30%,#0a1220);color:var(--text)}
+    .shell{max-width:1560px;margin:0 auto;padding:20px}
+    .hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px}
+    h1{margin:0;font-size:32px}
+    .sub{color:var(--muted);margin-top:6px}
+    .grid{display:grid;grid-template-columns:360px 1fr 380px;gap:18px;align-items:start}
+    .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .pane{padding:18px}
+    .section-title{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input,select,button,textarea{width:100%;padding:12px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:#091322;color:var(--text)}
+    button{background:linear-gradient(180deg,#2283ff,#1561c7);font-weight:700;cursor:pointer}
+    button:hover{filter:brightness(1.06)}
+    .stack-row{display:grid;grid-template-columns:1.3fr 1fr .7fr;gap:8px;margin-bottom:8px}
+    .viz{padding:0;overflow:hidden}
+    .viz-top{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line)}
+    .viz-wrap{padding:18px}
+    .damper-stage{height:420px;border-radius:18px;background:radial-gradient(circle at top,#17335d,#09111d 65%);border:1px solid rgba(255,255,255,.07);position:relative;overflow:hidden}
+    .tube{position:absolute;left:50%;top:35px;transform:translateX(-50%);width:160px;height:350px;border:2px solid rgba(255,255,255,.28);border-radius:30px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01))}
+    .oil{position:absolute;left:50%;bottom:35px;transform:translateX(-50%);width:150px;height:220px;border-radius:0 0 24px 24px;background:linear-gradient(180deg,rgba(88,166,255,.22),rgba(88,166,255,.45))}
+    .piston{position:absolute;left:50%;transform:translateX(-50%);width:140px;height:20px;border-radius:14px;background:linear-gradient(180deg,#e7edf7,#98abc9);box-shadow:0 0 18px rgba(255,255,255,.2)}
+    .shaft{position:absolute;left:50%;top:0;transform:translateX(-50%);width:30px;height:180px;border-radius:0 0 12px 12px;background:linear-gradient(180deg,#dbe3ef,#97aac7)}
+    .port{position:absolute;top:5px;width:14px;height:10px;border-radius:8px;background:#0a1322;border:1px solid rgba(255,255,255,.18)}
+    .flow{position:absolute;height:8px;border-radius:12px;background:linear-gradient(90deg,rgba(77,212,172,.3),rgba(77,212,172,.9));filter:drop-shadow(0 0 10px rgba(77,212,172,.5));animation:flowMove 1.4s linear infinite}
+    .shim{position:absolute;left:50%;transform-origin:center left;height:3px;background:#ffd166;border-radius:4px}
+    .metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    .metric{padding:14px;border:1px solid var(--line);border-radius:16px;background:rgba(0,0,0,.14)}
+    .metric .k{color:var(--muted);font-size:12px}.metric .v{font-size:22px;font-weight:700;margin-top:6px}
+    .charts{display:grid;gap:18px}.chart{height:260px}
+    .mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    .summary-table{width:100%;border-collapse:collapse;font-size:13px}.summary-table td{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+    .tag{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(88,166,255,.16);border:1px solid rgba(88,166,255,.24);color:#d7e9ff;font-size:12px}
+    .footer-note{margin-top:12px;color:var(--muted);font-size:12px;line-height:1.5}
+    @keyframes flowMove{from{transform:translateX(-10px)}to{transform:translateX(10px)}}
+    @media (max-width:1280px){.grid{grid-template-columns:1fr}.charts{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="hero">
+      <div>
+        <h1>Shim Calculator Engineering</h1>
+        <div class="sub">Physics-led suspension flow simulator MVP — geometry, ports, shim opening, adjusters, spring and oil-height response.</div>
+      </div>
+      <div class="tag">Mountain Race Shop™ Engineering Platform</div>
+    </div>
+
+    <div class="grid">
+      <div class="card pane">
+        <h3 class="section-title">Inputs</h3>
+        <div class="form-grid">
+          <div><label>Mode</label><select id="mode"><option value="fork">Fork</option><option value="shock">Shock</option></select></div>
+          <div><label>Piston Ø mm</label><input id="piston_diameter_mm" type="number" value="24"></div>
+          <div><label>Shaft Ø mm</label><input id="shaft_diameter_mm" type="number" value="12"></div>
+          <div><label>Port count</label><input id="port_count" type="number" value="4"></div>
+          <div><label>Port Ø mm</label><input id="port_diameter_mm" type="number" value="6"></div>
+          <div><label>Bleed Ø mm</label><input id="bleed_diameter_mm" type="number" value="0.9"></div>
+          <div><label>Rebound orifice Ø mm</label><input id="rebound_orifice_diameter_mm" type="number" value="1.2"></div>
+          <div><label>Low-speed clicks out</label><input id="low_speed_clicks_out" type="number" value="12"></div>
+          <div><label>High-speed turns out</label><input id="high_speed_turns_out" type="number" step="0.1" value="1.5"></div>
+          <div><label>Spring N/mm</label><input id="spring_rate_n_per_mm" type="number" step="0.1" value="4.6"></div>
+          <div><label>Preload mm</label><input id="preload_mm" type="number" value="5"></div>
+          <div><label>Travel mm</label><input id="travel_mm" type="number" value="300"></div>
+          <div><label>Motion ratio</label><input id="motion_ratio" type="number" step="0.01" value="1"></div>
+          <div><label>Oil height mm</label><input id="oil_height_mm" type="number" value="110"></div>
+          <div><label>Tube inner Ø mm</label><input id="tube_inner_diameter_mm" type="number" value="48"></div>
+          <div><label>Gas pressure bar</label><input id="initial_gas_pressure_bar" type="number" step="0.1" value="6"></div>
+          <div><label>Velocity max m/s</label><input id="shaft_velocity_max_m_s" type="number" step="0.1" value="1.0"></div>
+        </div>
+
+        <div style="margin-top:16px">
+          <label>Compression stack (diameter, thickness, qty — one per line)</label>
+          <textarea id="compression_stack" rows="4">24,0.15,6
+22,0.15,2
+20,0.10,1</textarea>
+        </div>
+        <div style="margin-top:10px">
+          <label>Rebound stack (diameter, thickness, qty — one per line)</label>
+          <textarea id="rebound_stack" rows="4">22,0.15,5
+20,0.15,2
+18,0.10,1</textarea>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+          <button id="simulateBtn">Run simulation</button>
+          <button id="demoBtn" type="button">Load MX demo</button>
+        </div>
+        <div class="footer-note">This MVP uses a transparent quasi-steady hydraulic model so it can be tuned against dyno data later. It is a serious scaffold, not a final validated production solver.</div>
+      </div>
+
+      <div class="card viz">
+        <div class="viz-top">
+          <div>
+            <div class="section-title" style="margin:0">Live engineering view</div>
+            <div id="modeLabel" class="sub">Compression-side flow animation</div>
+          </div>
+          <div class="tag" id="velocityTag">0.30 m/s focus</div>
+        </div>
+        <div class="viz-wrap">
+          <div class="damper-stage" id="stage">
+            <div class="tube"></div>
+            <div class="oil" id="oil"></div>
+            <div class="shaft" id="shaft"></div>
+            <div class="piston" id="piston">
+              <div class="port" style="left:16px"></div>
+              <div class="port" style="left:46px"></div>
+              <div class="port" style="left:76px"></div>
+              <div class="port" style="left:106px"></div>
+            </div>
+            <div class="shim" id="shim1" style="top:0;width:64px"></div>
+            <div class="shim" id="shim2" style="top:0;width:56px"></div>
+            <div class="flow" id="flow1" style="top:190px;left:calc(50% - 150px);width:100px"></div>
+            <div class="flow" id="flow2" style="top:220px;left:calc(50% + 50px);width:90px"></div>
+          </div>
+
+          <div class="metrics">
+            <div class="metric"><div class="k">Compression ζ</div><div class="v" id="compZeta">—</div></div>
+            <div class="metric"><div class="k">Rebound ζ</div><div class="v" id="rebZeta">—</div></div>
+            <div class="metric"><div class="k">Port area mm²</div><div class="v" id="portArea">—</div></div>
+            <div class="metric"><div class="k">Effective piston area mm²</div><div class="v" id="pistonArea">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card pane">
+        <h3 class="section-title">Engineering summary</h3>
+        <table class="summary-table">
+          <tr><td>Total port area</td><td id="sumPortArea">—</td></tr>
+          <tr><td>Bleed area</td><td id="sumBleed">—</td></tr>
+          <tr><td>Rebound orifice area</td><td id="sumReboundArea">—</td></tr>
+          <tr><td>Critical damping</td><td id="sumCritical">—</td></tr>
+          <tr><td>Compression force @ 0.3 m/s</td><td id="sumComp03">—</td></tr>
+          <tr><td>Rebound force @ 0.3 m/s</td><td id="sumReb03">—</td></tr>
+          <tr><td>Main flow share @ 0.3 m/s</td><td id="sumMainFlow">—</td></tr>
+          <tr><td>Bypass flow share @ 0.3 m/s</td><td id="sumBypassFlow">—</td></tr>
+          <tr><td>Shim lift @ 0.3 m/s</td><td id="sumLift">—</td></tr>
+          <tr><td>Air pressure at full stroke</td><td id="sumAirEnd">—</td></tr>
+        </table>
+        <div class="mini-grid">
+          <div class="metric"><div class="k">Harshness flag</div><div class="v" id="harshness">—</div></div>
+          <div class="metric"><div class="k">Bottoming support</div><div class="v" id="bottoming">—</div></div>
+        </div>
+        <div class="footer-note">Next production steps: dyno CSV overlay, base/mid-valve separation, true high-speed poppet threshold modelling, hysteresis and cavitation layer, report export.</div>
+      </div>
+    </div>
+
+    <div class="charts" style="margin-top:18px">
+      <div class="card pane"><div id="forceChart" class="chart"></div></div>
+      <div class="card pane"><div id="pressureChart" class="chart"></div></div>
+      <div class="card pane"><div id="liftChart" class="chart"></div></div>
+      <div class="card pane"><div id="springChart" class="chart"></div></div>
+    </div>
+  </div>
+
+  <script>
+    function parseStack(text){
+      return text.trim().split(/\n+/).filter(Boolean).map(line=>{
+        const [diameter_mm, thickness_mm, qty] = line.split(',').map(v=>Number(String(v).trim()));
+        return {diameter_mm, thickness_mm, qty};
+      });
+    }
+
+    function payloadFromForm(){
+      const ids = [
+        'mode','piston_diameter_mm','shaft_diameter_mm','port_count','port_diameter_mm','bleed_diameter_mm',
+        'rebound_orifice_diameter_mm','low_speed_clicks_out','high_speed_turns_out','spring_rate_n_per_mm',
+        'preload_mm','travel_mm','motion_ratio','oil_height_mm','tube_inner_diameter_mm','initial_gas_pressure_bar',
+        'shaft_velocity_max_m_s'
+      ];
+      const p = {};
+      for(const id of ids){
+        const el = document.getElementById(id);
+        p[id] = el.tagName === 'SELECT' ? el.value : Number(el.value);
+      }
+      p.compression_stack = parseStack(document.getElementById('compression_stack').value);
+      p.rebound_stack = parseStack(document.getElementById('rebound_stack').value);
+      p.steps = 41;
+      return p;
+    }
+
+    function nearestByAbs(arr, fn){
+      return arr.reduce((a,b)=>Math.abs(fn(b)) < Math.abs(fn(a)) ? b : a);
+    }
+
+    function engineeringFlags(comp03, airEnd, zetaComp){
+      let harshness = 'Normal';
+      if (comp03 > 1800 || zetaComp > 0.45) harshness = 'High';
+      else if (comp03 > 1200 || zetaComp > 0.32) harshness = 'Medium';
+
+      let bottoming = 'Low';
+      if (airEnd > 8) bottoming = 'High';
+      else if (airEnd > 4.5) bottoming = 'Medium';
+      return { harshness, bottoming };
+    }
+
+    function updateAnimation(point){
+      const piston = document.getElementById('piston');
+      const shaft = document.getElementById('shaft');
+      const oil = document.getElementById('oil');
+      const shim1 = document.getElementById('shim1');
+      const shim2 = document.getElementById('shim2');
+      const flow1 = document.getElementById('flow1');
+      const flow2 = document.getElementById('flow2');
+
+      const y = 140 + Math.min(Math.abs(point.velocity_m_s) * 140, 140);
+      piston.style.top = y + 'px';
+      shaft.style.height = (y + 10) + 'px';
+      oil.style.height = (210 + Math.min(point.pressure_pa / 30000, 110)) + 'px';
+      const liftPx = Math.min(point.shim_lift_mm * 28, 18);
+      shim1.style.top = (y - 5) + 'px';
+      shim2.style.top = (y - 1) + 'px';
+      shim1.style.transform = `translateX(6px) rotate(${-liftPx}deg)`;
+      shim2.style.transform = `translateX(12px) rotate(${-liftPx * 0.7}deg)`;
+      flow1.style.width = (50 + point.flow_main_pct * 1.1) + 'px';
+      flow2.style.width = (30 + point.flow_bypass_pct * 0.8) + 'px';
+      document.getElementById('velocityTag').textContent = `${Math.abs(point.velocity_m_s).toFixed(2)} m/s focus`;
+    }
+
+    function renderCharts(data){
+      const c = data.compression;
+      const r = data.rebound;
+      const s = data.spring;
+      Plotly.newPlot('forceChart', [
+        {x:r.map(p=>p.velocity_m_s), y:r.map(p=>p.force_n), mode:'lines', name:'Rebound'},
+        {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.force_n), mode:'lines', name:'Compression'}
+      ], {paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#eef4ff'}, title:'Force vs shaft velocity', xaxis:{title:'Velocity (m/s)'}, yaxis:{title:'Force (N)'}});
+
+      Plotly.newPlot('pressureChart', [
+        {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Compression'},
+        {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Rebound'}
+      ], {paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#eef4ff'}, title:'Valve pressure drop', xaxis:{title:'|Velocity| (m/s)'}, yaxis:{title:'ΔP (bar)'}});
+
+      Plotly.newPlot('liftChart', [
+        {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.shim_lift_mm), mode:'lines', name:'Compression shim lift'},
+        {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.shim_lift_mm), mode:'lines', name:'Rebound shim lift'}
+      ], {paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#eef4ff'}, title:'Shim lift vs velocity', xaxis:{title:'|Velocity| (m/s)'}, yaxis:{title:'Lift (mm)'}});
+
+      Plotly.newPlot('springChart', [
+        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.spring_force_n), mode:'lines', name:'Coil spring'},
+        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.air_force_n), mode:'lines', name:'Air spring'},
+        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.combined_force_n), mode:'lines', name:'Combined'}
+      ], {paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#eef4ff'}, title:'Oil height / air spring progression', xaxis:{title:'Travel (mm)'}, yaxis:{title:'Force (N)'}});
+    }
+
+    function updateSummary(data){
+      const comp03 = nearestByAbs(data.compression, p=>p.velocity_m_s - 0.3);
+      const reb03 = nearestByAbs(data.rebound, p=>Math.abs(p.velocity_m_s) - 0.3);
+      const springEnd = data.spring[data.spring.length - 1];
+      const flags = engineeringFlags(comp03.force_n, springEnd.air_pressure_bar_abs, data.summary.compression_zeta);
+
+      document.getElementById('compZeta').textContent = data.summary.compression_zeta.toFixed(2);
+      document.getElementById('rebZeta').textContent = data.summary.rebound_zeta.toFixed(2);
+      document.getElementById('portArea').textContent = data.summary.total_port_area_mm2.toFixed(1);
+      document.getElementById('pistonArea').textContent = data.summary.piston_effective_area_mm2.toFixed(1);
+      document.getElementById('sumPortArea').textContent = data.summary.total_port_area_mm2.toFixed(1) + ' mm²';
+      document.getElementById('sumBleed').textContent = data.summary.bleed_area_mm2.toFixed(2) + ' mm²';
+      document.getElementById('sumReboundArea').textContent = data.summary.rebound_orifice_area_mm2.toFixed(2) + ' mm²';
+      document.getElementById('sumCritical').textContent = data.summary.critical_damping_n_s_m.toFixed(0) + ' N·s/m';
+      document.getElementById('sumComp03').textContent = comp03.force_n.toFixed(0) + ' N';
+      document.getElementById('sumReb03').textContent = Math.abs(reb03.force_n).toFixed(0) + ' N';
+      document.getElementById('sumMainFlow').textContent = comp03.flow_main_pct.toFixed(0) + ' %';
+      document.getElementById('sumBypassFlow').textContent = comp03.flow_bypass_pct.toFixed(0) + ' %';
+      document.getElementById('sumLift').textContent = comp03.shim_lift_mm.toFixed(3) + ' mm';
+      document.getElementById('sumAirEnd').textContent = springEnd.air_pressure_bar_abs.toFixed(2) + ' bar abs';
+      document.getElementById('harshness').textContent = flags.harshness;
+      document.getElementById('bottoming').textContent = flags.bottoming;
+      updateAnimation(comp03);
+    }
+
+    async function simulate(){
+      const btn = document.getElementById('simulateBtn');
+      btn.textContent = 'Running...';
+      btn.disabled = true;
+      try{
+        const response = await fetch('/api/simulate', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payloadFromForm())});
+        const data = await response.json();
+        renderCharts(data);
+        updateSummary(data);
+      }catch(err){
+        alert('Simulation failed. Check stack input formatting.');
+        console.error(err);
+      }finally{
+        btn.textContent = 'Run simulation';
+        btn.disabled = false;
+      }
+    }
+
+    function loadDemo(){
+      document.getElementById('mode').value = 'fork';
+      document.getElementById('piston_diameter_mm').value = '24';
+      document.getElementById('shaft_diameter_mm').value = '12';
+      document.getElementById('port_count').value = '4';
+      document.getElementById('port_diameter_mm').value = '6.2';
+      document.getElementById('bleed_diameter_mm').value = '1.0';
+      document.getElementById('rebound_orifice_diameter_mm').value = '1.3';
+      document.getElementById('low_speed_clicks_out').value = '14';
+      document.getElementById('high_speed_turns_out').value = '1.8';
+      document.getElementById('spring_rate_n_per_mm').value = '4.8';
+      document.getElementById('preload_mm').value = '4';
+      document.getElementById('travel_mm').value = '310';
+      document.getElementById('motion_ratio').value = '1';
+      document.getElementById('oil_height_mm').value = '105';
+      document.getElementById('tube_inner_diameter_mm').value = '48';
+      document.getElementById('initial_gas_pressure_bar').value = '6';
+      document.getElementById('shaft_velocity_max_m_s').value = '1.0';
+      document.getElementById('compression_stack').value = '24,0.15,8\n22,0.15,2\n20,0.10,1';
+      document.getElementById('rebound_stack').value = '22,0.15,6\n20,0.15,2\n18,0.10,1';
+      simulate();
+    }
+
+    document.getElementById('simulateBtn').addEventListener('click', simulate);
+    document.getElementById('demoBtn').addEventListener('click', loadDemo);
+    loadDemo();
+  </script>
+</body>
+</html>
