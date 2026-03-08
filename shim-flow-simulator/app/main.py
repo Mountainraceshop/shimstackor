@@ -255,7 +255,7 @@ def build_stages(inp: SimulationInput, direction: str) -> list[ValveStage]:
                 name="base",
                 port_count=inp.base_port_count,
                 port_diameter_mm=inp.base_port_diameter_mm,
-                stack=inp.base_valve_stack if direction == "compression" else inp.rebound_stack,
+                stack=inp.base_valve_stack,
                 area_multiplier=0.95,
                 hs_multiplier=1.08,
             )
@@ -266,7 +266,7 @@ def build_stages(inp: SimulationInput, direction: str) -> list[ValveStage]:
                 name="mid",
                 port_count=inp.mid_port_count,
                 port_diameter_mm=inp.mid_port_diameter_mm,
-                stack=inp.mid_valve_stack if direction == "compression" else inp.rebound_stack,
+                stack=inp.mid_valve_stack,
                 area_multiplier=0.90,
                 hs_multiplier=1.15,
             )
@@ -528,17 +528,20 @@ def parse_dyno_csv(csv_text: str) -> dict:
     vel_col = fields[vel_idx]
     force_col = fields[force_idx]
     dir_col = fields[dir_idx] if dir_idx is not None else None
+    vel_key = reader.fieldnames[vel_idx]
+    force_key = reader.fieldnames[force_idx]
+    dir_key = reader.fieldnames[dir_idx] if dir_idx is not None else None
 
     compression = []
     rebound = []
     for row in reader:
         try:
-            vel = float(str(row[vel_col]).strip())
-            force = float(str(row[force_col]).strip())
+            vel = float(str(row[vel_key]).strip())
+            force = float(str(row[force_key]).strip())
         except (TypeError, ValueError):
             continue
-        if dir_col:
-            d = str(row.get(dir_col, "")).strip().lower()
+        if dir_key:
+            d = str(row.get(dir_key, "")).strip().lower()
             if "reb" in d:
                 rebound.append({"velocity_m_s": -abs(vel), "force_n": -abs(force)})
             elif "comp" in d:
