@@ -335,6 +335,8 @@ def solve_series_flow_for_dp(
             hi = mid
         else:
             lo = mid
+        if abs(hi - lo) <= 1e-10:
+            break
     return 0.5 * (lo + hi), best_stage_data
 
 
@@ -382,6 +384,8 @@ def solve_velocity_point(inp: SimulationInput, v_m_s: float, direction: str) -> 
             hi_dp = dp
         else:
             lo_dp = dp
+        if abs(hi_dp - lo_dp) <= 1.0:
+            break
 
     main_lift_mm = 0.0
     for stage in converged_stage_data:
