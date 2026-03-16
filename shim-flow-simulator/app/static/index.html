@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Shim Calculator Engineering</title>
+  <title>Shim Calculator Engineering | Suspension Flow Simulator</title>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
     :root{--bg:#09111f;--panel:#0f1a2d;--panel2:#13213a;--line:rgba(255,255,255,.1);--text:#eef4ff;--muted:#9fb1d3;--radius:16px}
@@ -13,6 +13,14 @@
     .hero{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:16px}
     .sub{color:var(--muted)}
     .tag{padding:7px 11px;border-radius:999px;font-size:12px;background:rgba(88,166,255,.16);border:1px solid rgba(88,166,255,.24)}
+    .pitch{margin-bottom:16px}
+    .pitch h2{margin:0 0 8px;font-size:24px}
+    .pitch .lead{color:#d7e6ff;line-height:1.55;font-size:15px;margin:0 0 12px}
+    .pitch-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .pitch-card{padding:11px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.14)}
+    .pitch-card .t{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+    .pitch-card .d{font-size:13px;line-height:1.45}
+    .pitch-cta{margin-top:12px;color:#dce9ff;font-size:13px}
     .grid{display:grid;grid-template-columns:390px 1fr 390px;gap:16px}
     .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:var(--radius)}
     .pane{padding:16px}
@@ -42,7 +50,11 @@
     .table td{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)}
     .chart{height:250px}
     .charts{display:grid;gap:16px;margin-top:16px}
-    @media (max-width:1320px){.grid{grid-template-columns:1fr}.charts{grid-template-columns:1fr}}
+    @media (max-width:1320px){
+      .grid{grid-template-columns:1fr}
+      .charts{grid-template-columns:1fr}
+      .pitch-grid{grid-template-columns:1fr 1fr}
+    }
   </style>
 </head>
 <body>
@@ -50,9 +62,38 @@
     <div class="hero">
       <div>
         <h1 style="margin:0">Shim Calculator Engineering</h1>
-        <div class="sub">Flow-path simulation with base/mid-valve split, HSC poppet model, cavitation estimate, and dyno CSV overlay.</div>
+        <div class="sub">Engineering-grade shim-stack analysis for modern workshops, tuners, and race teams.</div>
       </div>
-      <div class="tag">Fork + Shock Engineering Suite</div>
+      <div class="tag">Fork + Shock Professional Suite</div>
+    </div>
+
+    <div class="card pane pitch">
+      <h2>All the depth of legacy damping tools, rebuilt for modern tuning workflows.</h2>
+      <p class="lead">
+        Shim Calculator Engineering combines serious suspension physics with a clean browser interface, so you can tune faster,
+        explain decisions with confidence, and deliver repeatable, report-ready results to customers and teams.
+      </p>
+      <div class="pitch-grid">
+        <div class="pitch-card">
+          <div class="t">Physics First</div>
+          <div class="d">Flow-path simulation with piston, base, and mid-valve interaction instead of simple stack guessing.</div>
+        </div>
+        <div class="pitch-card">
+          <div class="t">Platform Coverage</div>
+          <div class="d">Supports KYB/Showa/WP forks and monotube or twin-tube shock architectures in one environment.</div>
+        </div>
+        <div class="pitch-card">
+          <div class="t">Engineer Visibility</div>
+          <div class="d">Inspect pressure, force, shim lift, flow split, cavitation margin, and spring/chamber progression.</div>
+        </div>
+        <div class="pitch-card">
+          <div class="t">Commercial Advantage</div>
+          <div class="d">Overlay dyno CSV data, compare model vs measured behavior, and justify recommendations clearly.</div>
+        </div>
+      </div>
+      <div class="pitch-cta">
+        Start with the demo setup, import dyno data, and build customer-ready valving recommendations backed by transparent assumptions.
+      </div>
     </div>
 
     <div class="grid">
