@@ -101,6 +101,20 @@
     .intro-actions button{width:auto;padding:9px 14px}
     .intro-actions .right{display:flex;gap:8px}
     .intro-skip{background:transparent;border:1px solid rgba(255,255,255,.24)}
+    .intro-choice-overlay{
+      position:fixed;inset:0;z-index:12100;display:none;align-items:center;justify-content:center;
+      padding:20px;background:rgba(5,9,18,.75);backdrop-filter:blur(2px)
+    }
+    .intro-choice-overlay.active{display:flex}
+    .intro-choice-card{
+      width:min(580px,95vw);border-radius:16px;border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg,#10213c,#0d1b31);padding:18px
+    }
+    .intro-choice-title{margin:0 0 8px;font-size:24px}
+    .intro-choice-text{margin:0;color:#d5e5ff;line-height:1.5}
+    .intro-choice-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px}
+    .intro-choice-actions button{padding:11px 12px}
+    .choice-secondary{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22)}
     @media (max-width:1320px){
       .grid{grid-template-columns:1fr}
       .charts{grid-template-columns:1fr}
@@ -388,6 +402,19 @@
     </div>
   </div>
 
+  <div id="introChoiceOverlay" class="intro-choice-overlay" aria-hidden="true">
+    <div class="intro-choice-card">
+      <div class="section" style="margin-bottom:4px">Welcome</div>
+      <h3 class="intro-choice-title">Choose your walkthrough</h3>
+      <p class="intro-choice-text">Pick a guided intro style now, or skip and start tuning immediately. You can replay any tour later from the top-right buttons.</p>
+      <div class="intro-choice-actions">
+        <button id="introChoiceQuickBtn" type="button">Start quick tour (recommended)</button>
+        <button id="introChoiceDeepBtn" type="button">Start in-depth tour</button>
+        <button id="introChoiceSkipBtn" type="button" class="choice-secondary">Skip for now</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let dynoOverlay = {compression: [], rebound: []};
     const paymentState = {
@@ -400,6 +427,7 @@
       pendingOrderId: '',
     };
     const INTRO_STORAGE_KEY = 'shimstackor_intro_seen_v1';
+    const INTRO_CHOICE_STORAGE_KEY = 'shimstackor_intro_choice_seen_v1';
     const INTRO_STEP_MS = { quick: 5400, detailed: 7600 };
     const introTours = {
       quick: [
@@ -488,6 +516,18 @@
 
     function currentIntroStepMs(){
       return INTRO_STEP_MS[introState.mode] || INTRO_STEP_MS.quick;
+    }
+
+    function showIntroChoiceOverlay(){
+      const choice = document.getElementById('introChoiceOverlay');
+      choice.classList.add('active');
+      choice.setAttribute('aria-hidden', 'false');
+    }
+
+    function hideIntroChoiceOverlay(){
+      const choice = document.getElementById('introChoiceOverlay');
+      choice.classList.remove('active');
+      choice.setAttribute('aria-hidden', 'true');
     }
 
     function setPaymentStatus(message, kind=''){
@@ -645,6 +685,7 @@
       if (introState.running) return;
       introState.mode = mode in introTours ? mode : 'quick';
       if (!force && localStorage.getItem(INTRO_STORAGE_KEY) === '1') return;
+      hideIntroChoiceOverlay();
       introState.running = true;
       introState.stepIndex = 0;
       const overlay = document.getElementById('introOverlay');
@@ -992,7 +1033,11 @@
       if (paymentState.paid || paymentState.bypass) setLocked(false);
       else resetLockedOutputs();
       loadDemo();
-      window.setTimeout(() => startIntroTour('quick', false), 500);
+      const sawChoice = localStorage.getItem(INTRO_CHOICE_STORAGE_KEY) === '1';
+      const sawTour = localStorage.getItem(INTRO_STORAGE_KEY) === '1';
+      window.setTimeout(() => {
+        if (!sawTour && !sawChoice) showIntroChoiceOverlay();
+      }, 500);
     }
 
     document.getElementById('introSkipBtn').addEventListener('click', () => endIntroTour(true));
@@ -1011,6 +1056,19 @@
       endIntroTour(false);
       startIntroTour('detailed', true);
     });
+    document.getElementById('introChoiceQuickBtn').addEventListener('click', () => {
+      localStorage.setItem(INTRO_CHOICE_STORAGE_KEY, '1');
+      startIntroTour('quick', true);
+    });
+    document.getElementById('introChoiceDeepBtn').addEventListener('click', () => {
+      localStorage.setItem(INTRO_CHOICE_STORAGE_KEY, '1');
+      startIntroTour('detailed', true);
+    });
+    document.getElementById('introChoiceSkipBtn').addEventListener('click', () => {
+      localStorage.setItem(INTRO_CHOICE_STORAGE_KEY, '1');
+      localStorage.setItem(INTRO_STORAGE_KEY, '1');
+      hideIntroChoiceOverlay();
+    });
     window.addEventListener('resize', () => {
       if (!introState.running) return;
       setIntroHighlight(currentIntroSteps()[introState.stepIndex].target);
@@ -1018,6 +1076,12 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && introState.running){
         endIntroTour(true);
+      } else if (e.key === 'Escape'){
+        const chooser = document.getElementById('introChoiceOverlay');
+        if (chooser.classList.contains('active')){
+          localStorage.setItem(INTRO_CHOICE_STORAGE_KEY, '1');
+          hideIntroChoiceOverlay();
+        }
       }
     });
     document.getElementById('simulateBtn').addEventListener('click', simulate);
