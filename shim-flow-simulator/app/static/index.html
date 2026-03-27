@@ -255,6 +255,7 @@
               <div id="crossoverIntensityValue" class="value">Medium (50%)</div>
             </div>
             <div class="note" style="margin-top:6px">Applies to crossover-capable presets (enduro fork/shock). Lower = softer crossover, higher = firmer crossover.</div>
+            <div id="crossoverIntensityHint" class="note" style="margin-top:6px;display:none"></div>
           </div>
           <div id="abCompareTag" class="ab-compare-tag">A/B compare inactive</div>
         </div>
@@ -523,6 +524,7 @@
     let dynoOverlay = {compression: [], rebound: []};
     let latestSimulationData = null;
     let abBaseline = null;
+    let lastCrossoverHint = '';
     const PRESET_LABELS = {
       kyb_sss_cartridge: 'KYB SSS cartridge baseline',
       kyb_sss_mx_fork: 'KYB SSS MX fork (firmer race)',
@@ -1266,6 +1268,18 @@
       if (el) el.textContent = `${tone} (${value}%)`;
     }
 
+    function setCrossoverChangeNote(message = ''){
+      const note = document.getElementById('crossoverIntensityHint');
+      if (!note) return;
+      if (!message){
+        note.style.display = 'none';
+        note.textContent = '';
+        return;
+      }
+      note.style.display = 'block';
+      note.textContent = message;
+    }
+
     function parseStackRows(textValue){
       return String(textValue || '').trim().split(/\n+/).filter(Boolean).map((line) => {
         const [diameter, thickness, qty] = line.split(',').map(v => Number(String(v).trim()));
@@ -1278,10 +1292,20 @@
     }
 
     function applyCrossoverIntensity(stacks, presetName){
-      if (!CROSSOVER_PRESETS.has(presetName)) return stacks;
+      if (!CROSSOVER_PRESETS.has(presetName)){
+        lastCrossoverHint = '';
+        return stacks;
+      }
       const pct = crossoverIntensityValue() / 100;
       const factor = CROSSOVER_SCALE.min + (CROSSOVER_SCALE.max - CROSSOVER_SCALE.min) * pct;
       const out = {...stacks};
+      const changed = [];
+      const labelMap = {
+        compression_stack: 'Comp',
+        rebound_stack: 'Reb',
+        base_valve_stack: 'Base',
+        mid_valve_stack: 'Mid',
+      };
       for (const [k, v] of Object.entries(stacks || {})){
         const rows = parseStackRows(v);
         if (rows.length < 3){
@@ -1290,14 +1314,31 @@
         }
         const startIdx = Math.max(1, rows.length - 2);
         for (let i = startIdx; i < rows.length; i += 1){
-          const scaledQty = Math.max(1, Math.round(rows[i].qty * factor));
-          if (rows[i].qty === 1 && scaledQty === 1){
-            rows[i].thickness = Math.max(0.05, Number((rows[i].thickness * factor).toFixed(2)));
+          const beforeQty = Math.max(1, Math.round(rows[i].qty));
+          const afterQty = Math.max(1, Math.round(beforeQty * factor));
+          if (beforeQty === 1 && afterQty === 1){
+            const beforeThk = Number(rows[i].thickness);
+            const afterThk = Math.max(0.05, Number((beforeThk * factor).toFixed(2)));
+            rows[i].thickness = afterThk;
+            if (afterThk !== beforeThk){
+              changed.push(`${labelMap[k] || k} row ${i + 1}: ${beforeThk.toFixed(2)}t->${afterThk.toFixed(2)}t`);
+            }
           } else {
-            rows[i].qty = scaledQty;
+            rows[i].qty = afterQty;
+            if (afterQty !== beforeQty){
+              changed.push(`${labelMap[k] || k} row ${i + 1}: ${beforeQty}->${afterQty}`);
+            }
           }
         }
         out[k] = formatStackRows(rows);
+      }
+
+      if (!changed.length){
+        lastCrossoverHint = `Intensity ${Math.round(pct * 100)}%: no tail shim qty change at this setting.`;
+      } else {
+        const preview = changed.slice(0, 4).join(' | ');
+        const extra = changed.length > 4 ? ` | +${changed.length - 4} more` : '';
+        lastCrossoverHint = `Adjusted: ${preview}${extra}`;
       }
       return out;
     }
@@ -1354,6 +1395,7 @@
         mid_valve_stack: '20,0.10,3\n18,0.10,2',
       });
       updateModeVisibility();
+      setCrossoverChangeNote('');
       if (paymentState.paid || paymentState.bypass) simulate();
     }
 
@@ -1445,6 +1487,7 @@
         presetSelect: name,
       });
       updateModeVisibility();
+      setCrossoverChangeNote(lastCrossoverHint);
       updateAbCompareTag(latestSimulationData);
     }
 
@@ -1541,6 +1584,8 @@
       if (CROSSOVER_PRESETS.has(preset)){
         applyPreset(preset);
         if (paymentState.paid || paymentState.bypass) simulate();
+      } else {
+        setCrossoverChangeNote('Select an Enduro crossover preset to apply intensity changes.');
       }
     });
     document.getElementById('helpTourFab').addEventListener('click', () => {
