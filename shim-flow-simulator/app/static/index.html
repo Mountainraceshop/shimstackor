@@ -1290,7 +1290,12 @@
         }
         const startIdx = Math.max(1, rows.length - 2);
         for (let i = startIdx; i < rows.length; i += 1){
-          rows[i].qty = Math.max(1, Math.round(rows[i].qty * factor));
+          const scaledQty = Math.max(1, Math.round(rows[i].qty * factor));
+          if (rows[i].qty === 1 && scaledQty === 1){
+            rows[i].thickness = Math.max(0.05, Number((rows[i].thickness * factor).toFixed(2)));
+          } else {
+            rows[i].qty = scaledQty;
+          }
         }
         out[k] = formatStackRows(rows);
       }
