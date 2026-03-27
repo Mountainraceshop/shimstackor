@@ -577,7 +577,7 @@
         alert(String(err.message || err));
         console.error(err);
       }finally{
-        btn.disabled = false; btn.textContent = 'Run simulation';
+        btn.disabled = !paymentState.paid && !paymentState.bypass; btn.textContent = 'Run simulation';
       }
     }
 

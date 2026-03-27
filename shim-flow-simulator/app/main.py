@@ -976,4 +976,6 @@ def simulate(inp: SimulationInput) -> JSONResponse:
         "rebound": rebound,
         "spring": spring,
     }
+    if not payment_gate_bypass() and inp.payment_token:
+        consume_paid_token(inp.payment_token)
     return JSONResponse(result)
