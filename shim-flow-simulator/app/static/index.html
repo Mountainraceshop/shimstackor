@@ -50,6 +50,8 @@
     .lock-overlay .inner .title{font-size:16px;font-weight:700}
     .lock-overlay .inner .desc{font-size:13px;color:#d3e3ff;margin-top:6px;line-height:1.45}
     .lockable.locked .lock-overlay{display:flex}
+    body.tour-readable .lockable.locked .lockable-content{filter:none;opacity:1;pointer-events:auto;user-select:auto}
+    body.tour-readable .lockable.locked .lock-overlay{display:none}
     .viz{padding:0;overflow:hidden}
     .viz-top{display:flex;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
     .viz-wrap{padding:16px}
@@ -71,10 +73,107 @@
     .stack-box pre{margin:6px 0 0;white-space:pre-wrap;font-size:11px;line-height:1.35;color:#d7e6ff}
     .chart{height:250px}
     .charts{display:grid;gap:16px;margin-top:16px}
+    .ghost-btn{
+      width:auto;padding:7px 10px;border-radius:999px;background:rgba(0,0,0,.2);
+      border:1px solid rgba(255,255,255,.22);font-size:12px;font-weight:600;color:#dce9ff
+    }
+    .ghost-btn:hover{background:rgba(88,166,255,.15)}
+    .tour-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 6px}
+    .mode-btn{
+      padding:9px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.22);
+      background:rgba(0,0,0,.2);font-size:13px;font-weight:700
+    }
+    .mode-btn.active{background:linear-gradient(180deg,#2283ff,#1561c7);border-color:rgba(255,255,255,.3)}
+    .mode-hidden{display:none !important}
+    .mode-raw-selector{display:none}
+    .mode-note{font-size:12px;color:#cfe0ff;margin:0 0 10px;line-height:1.45}
+    .preset-block{margin:0 0 10px;padding:10px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(0,0,0,.14)}
+    .preset-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+    .preset-row select{padding:9px}
+    .preset-row button{width:auto;white-space:nowrap;padding:9px 12px}
+    .preset-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+    .preset-actions button{padding:9px 12px}
+    .crossover-intensity{margin-top:8px;padding:8px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(0,0,0,.12)}
+    .crossover-intensity label{margin-bottom:6px}
+    .crossover-intensity .row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+    .crossover-intensity .value{font-size:12px;color:#cfe0ff;min-width:88px;text-align:right}
+    .ab-compare-tag{
+      margin-top:8px;font-size:12px;color:#cfe0ff;background:rgba(88,166,255,.14);
+      border:1px solid rgba(88,166,255,.26);border-radius:9px;padding:8px 10px;display:none
+    }
+    .ab-compare-tag.show{display:block}
+    .intro-overlay{
+      position:fixed;inset:0;z-index:12000;display:none;align-items:flex-end;justify-content:center;
+      padding:24px;background:linear-gradient(180deg,rgba(5,9,18,.35),rgba(5,9,18,.8));
+      backdrop-filter:blur(2px)
+    }
+    .intro-overlay.active{display:flex}
+    .intro-highlight{
+      position:fixed;display:none;border:2px solid rgba(88,166,255,.95);border-radius:14px;
+      box-shadow:0 0 0 9999px rgba(3,7,14,.62), 0 0 0 4px rgba(88,166,255,.18), 0 0 24px rgba(88,166,255,.45);
+      pointer-events:none;transition:all .28s ease
+    }
+    .intro-card{
+      width:min(760px,96vw);border-radius:16px;border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg,#10213c,#0d1b31);padding:16px;position:relative;z-index:2
+    }
+    .intro-title{margin:2px 0 6px;font-size:21px}
+    .intro-text{margin:0;color:#d5e5ff;line-height:1.5}
+    .intro-progress{height:7px;border-radius:999px;background:rgba(255,255,255,.14);margin-top:12px;overflow:hidden}
+    .intro-progress>span{display:block;height:100%;width:0;background:linear-gradient(90deg,#32b6ff,#7be2ff);transition:width .1s linear}
+    .intro-step-meta{margin-top:8px;font-size:12px;color:var(--muted)}
+    .intro-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px}
+    .intro-actions button{width:auto;padding:9px 14px}
+    .intro-actions .right{display:flex;gap:8px}
+    .intro-skip{background:transparent;border:1px solid rgba(255,255,255,.24)}
+    .intro-choice-overlay{
+      position:fixed;inset:0;z-index:12100;display:none;align-items:center;justify-content:center;
+      padding:20px;background:rgba(5,9,18,.75);backdrop-filter:blur(2px)
+    }
+    .intro-choice-overlay.active{display:flex}
+    .intro-choice-card{
+      width:min(580px,95vw);border-radius:16px;border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg,#10213c,#0d1b31);padding:18px
+    }
+    .intro-choice-title{margin:0 0 8px;font-size:24px}
+    .intro-choice-text{margin:0;color:#d5e5ff;line-height:1.5}
+    .intro-choice-teaser{
+      margin-top:12px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.18)
+    }
+    .intro-choice-caption{font-size:12px;color:#cfe0ff;line-height:1.45;min-height:34px}
+    .intro-choice-progress{height:6px;border-radius:999px;background:rgba(255,255,255,.14);margin-top:8px;overflow:hidden}
+    .intro-choice-progress>span{display:block;height:100%;width:0;background:linear-gradient(90deg,#3ec2ff,#8be9ff)}
+    .intro-choice-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px}
+    .intro-choice-actions button{padding:11px 12px}
+    .choice-secondary{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22)}
+    .help-fab{
+      position:fixed;right:18px;bottom:18px;z-index:11900;width:48px;height:48px;border-radius:999px;
+      display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;line-height:1;
+      color:#eef4ff;background:linear-gradient(180deg,#2283ff,#1561c7);border:1px solid rgba(255,255,255,.28);
+      box-shadow:0 10px 24px rgba(0,0,0,.36)
+    }
+    .help-fab.pulse{animation:helpPulse 1.8s ease-out infinite}
+    @keyframes helpPulse{
+      0%{transform:scale(1);box-shadow:0 10px 24px rgba(0,0,0,.36),0 0 0 0 rgba(34,131,255,.55)}
+      70%{transform:scale(1.02);box-shadow:0 10px 24px rgba(0,0,0,.36),0 0 0 14px rgba(34,131,255,0)}
+      100%{transform:scale(1);box-shadow:0 10px 24px rgba(0,0,0,.36),0 0 0 0 rgba(34,131,255,0)}
+    }
+    .help-fab:hover{filter:brightness(1.06)}
+    .help-fab:focus-visible{outline:2px solid #7be2ff;outline-offset:2px}
+    .help-fab-tip{
+      position:fixed;right:76px;bottom:30px;z-index:11890;display:none;
+      padding:8px 10px;border-radius:10px;background:rgba(11,24,45,.94);border:1px solid rgba(255,255,255,.16);
+      color:#dce9ff;font-size:12px;white-space:nowrap;box-shadow:0 10px 20px rgba(0,0,0,.28)
+    }
+    .help-fab-tip.show{display:block}
     @media (max-width:1320px){
       .grid{grid-template-columns:1fr}
       .charts{grid-template-columns:1fr}
       .pitch-grid{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width:900px){
+      .help-fab-tip{display:none !important}
     }
   </style>
 </head>
@@ -85,7 +184,13 @@
         <h1 style="margin:0">Shim Calculator Engineering</h1>
         <div class="sub">Engineering-grade shim-stack analysis for modern workshops, tuners, and race teams.</div>
       </div>
-      <div class="tag">Fork + Shock Professional Suite</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <div class="tag">Fork + Shock Professional Suite</div>
+        <div class="tour-btns">
+          <button id="replayIntroBtn" class="ghost-btn" type="button">Replay quick tour</button>
+          <button id="replayIntroDeepBtn" class="ghost-btn" type="button">Replay in-depth tour</button>
+        </div>
+      </div>
     </div>
 
     <div class="card pane pitch">
@@ -118,12 +223,45 @@
     </div>
 
     <div class="grid">
-      <div class="card pane">
+      <div class="card pane" id="inputsCard">
         <h3 class="section">Inputs</h3>
+        <div class="mode-switch" id="modeSwitch">
+          <button id="modeForkBtn" class="mode-btn active" type="button">Fork settings</button>
+          <button id="modeShockBtn" class="mode-btn" type="button">Shock settings</button>
+        </div>
+        <div id="modeNote" class="mode-note">
+          Fork mode: air-fork platform and chamber fields are visible.
+        </div>
+        <div class="preset-block">
+          <label>Preset setup</label>
+          <div class="preset-row">
+            <select id="presetSelect">
+              <option value="none">Select preset...</option>
+              <option value="kyb_sss_cartridge">KYB SSS cartridge baseline</option>
+              <option value="kyb_sss_mx_fork">KYB SSS MX fork (firmer race)</option>
+              <option value="kyb_sss_enduro_fork_crossover">KYB SSS Enduro fork (crossover)</option>
+              <option value="kyb_enduro_shock_crossover">KYB Enduro shock (crossover)</option>
+            </select>
+            <button id="applyPresetBtn" type="button">Apply preset</button>
+          </div>
+          <div class="preset-actions">
+            <button id="captureAbBtn" type="button">Capture A baseline</button>
+            <button id="clearAbBtn" type="button">Clear A/B compare</button>
+          </div>
+          <div class="crossover-intensity">
+            <label for="crossoverIntensity">Crossover intensity (preset assist)</label>
+            <div class="row">
+              <input id="crossoverIntensity" type="range" min="0" max="100" step="10" value="50">
+              <div id="crossoverIntensityValue" class="value">Medium (50%)</div>
+            </div>
+            <div class="note" style="margin-top:6px">Applies to crossover-capable presets (enduro fork/shock). Lower = softer crossover, higher = firmer crossover.</div>
+          </div>
+          <div id="abCompareTag" class="ab-compare-tag">A/B compare inactive</div>
+        </div>
         <div class="form-grid">
-          <div><label>Machine</label><select id="mode"><option value="fork">Fork</option><option value="shock">Shock</option></select></div>
-          <div><label>Fork platform</label><select id="fork_platform"><option value="coil">Coil</option><option value="kyb_psf1">KYB PSF1</option><option value="kyb_psf2">KYB PSF2</option><option value="showa_air">Showa Air</option><option value="wp_air">WP Air</option></select></div>
-          <div><label>Shock architecture</label><select id="shock_architecture"><option value="monotube">Monotube (KYB/Showa/WP)</option><option value="twin_tube">Twin-tube (Ohlins TTX/K-Tech)</option></select></div>
+          <div class="mode-raw-selector"><label>Machine</label><select id="mode"><option value="fork">Fork</option><option value="shock">Shock</option></select></div>
+          <div class="fork-only"><label>Fork platform</label><select id="fork_platform"><option value="coil">Coil</option><option value="kyb_psf1">KYB PSF1</option><option value="kyb_psf2">KYB PSF2</option><option value="showa_air">Showa Air</option><option value="wp_air">WP Air</option></select></div>
+          <div class="shock-only"><label>Shock architecture</label><select id="shock_architecture"><option value="monotube">Monotube (KYB/Showa/WP)</option><option value="twin_tube">Twin-tube (Ohlins TTX/K-Tech)</option></select></div>
           <div><label>Piston dia mm</label><input id="piston_diameter_mm" type="number" value="24"></div>
           <div><label>Shaft dia mm</label><input id="shaft_diameter_mm" type="number" value="12"></div>
           <div><label>Main ports count</label><input id="port_count" type="number" value="4"></div>
@@ -133,6 +271,8 @@
           <div><label>Mid ports count</label><input id="mid_port_count" type="number" value="3"></div>
           <div><label>Mid port dia mm</label><input id="mid_port_diameter_mm" type="number" value="4.8"></div>
           <div><label>Bleed dia mm</label><input id="bleed_diameter_mm" type="number" step="0.01" value="0.9"></div>
+          <div><label>Piston bleed holes count</label><input id="piston_bleed_hole_count" type="number" value="0"></div>
+          <div><label>Piston bleed hole dia mm</label><input id="piston_bleed_hole_diameter_mm" type="number" step="0.01" value="0.8"></div>
           <div><label>Rebound orifice dia mm</label><input id="rebound_orifice_diameter_mm" type="number" step="0.01" value="1.2"></div>
           <div><label>LS clicks out</label><input id="low_speed_clicks_out" type="number" value="12"></div>
           <div><label>Rebound clicks out</label><input id="rebound_clicks_out" type="number" value="12"></div>
@@ -141,6 +281,9 @@
           <div><label>HSC spring N/mm</label><input id="hsc_spring_rate_n_per_mm" type="number" step="0.1" value="18"></div>
           <div><label>HSC preload mm</label><input id="hsc_preload_mm" type="number" step="0.1" value="1.0"></div>
           <div><label>HSC max lift mm</label><input id="hsc_max_lift_mm" type="number" step="0.1" value="1.0"></div>
+          <div class="fork-only"><label>Mid-valve float mm</label><input id="mid_valve_float_mm" type="number" step="0.01" value="0.12"></div>
+          <div class="fork-only"><label>Trampoline preload mm</label><input id="trampoline_preload_mm" type="number" step="0.01" value="0.06"></div>
+          <div class="fork-only"><label>Trampoline spring N/mm</label><input id="trampoline_spring_rate_n_per_mm" type="number" step="0.1" value="20.0"></div>
           <div><label>Oil temp C</label><input id="oil_temperature_c" type="number" step="1" value="35"></div>
           <div><label>Oil viscosity cSt</label><input id="oil_viscosity_cst" type="number" step="0.1" value="16"></div>
           <div><label>Discharge coeff</label><input id="discharge_coefficient" type="number" step="0.01" value="0.70"></div>
@@ -162,23 +305,23 @@
           <div><label>Countershaft to rear axle mm</label><input id="countershaft_to_rear_axle_mm" type="number" step="0.1" value="580"></div>
           <div><label>CG height mm</label><input id="cg_height_mm" type="number" step="0.1" value="600"></div>
           <div><label>CG from front axle mm</label><input id="cg_from_front_axle_mm" type="number" step="0.1" value="780"></div>
-          <div><label>WP AER pressure psi</label><input id="air_spring_pressure_psi" type="number" step="0.1" value="171.2"></div>
-          <div><label>AER piston dia mm</label><input id="air_piston_diameter_mm" type="number" step="0.1" value="35"></div>
-          <div><label>AER positive volume cc</label><input id="air_positive_volume_cc" type="number" step="0.1" value="145"></div>
-          <div><label>AER negative volume cc</label><input id="air_negative_volume_cc" type="number" step="0.1" value="72"></div>
-          <div><label>AER negative pressure ratio</label><input id="air_negative_pressure_ratio" type="number" step="0.01" value="0.56"></div>
-          <div><label>AER sag mm</label><input id="air_sag_mm" type="number" step="0.1" value="65"></div>
-          <div><label>Ref pressure psi</label><input id="air_reference_pressure_psi" type="number" step="0.1" value="171.2"></div>
-          <div><label>Ref steel rate N/mm</label><input id="air_reference_equivalent_rate_n_mm" type="number" step="0.01" value="9.81"></div>
-          <div><label>Ref preload mm</label><input id="air_reference_preload_mm" type="number" step="0.1" value="4"></div>
-          <div><label>Target equivalent rate N/mm</label><input id="air_target_rate_n_mm" type="number" step="0.01" value="9.81"></div>
-          <div><label>Oil height mm</label><input id="oil_height_mm" type="number" value="110"></div>
-          <div><label>Tube dia mm</label><input id="tube_inner_diameter_mm" type="number" value="48"></div>
-          <div><label>Fork + chamber bar abs</label><input id="fork_positive_air_bar_abs" type="number" step="0.1" value="8"></div>
-          <div><label>Fork - chamber bar abs</label><input id="fork_negative_air_bar_abs" type="number" step="0.1" value="6"></div>
-          <div><label>Fork secondary cc</label><input id="fork_secondary_volume_cc" type="number" step="1" value="55"></div>
-          <div><label>Reservoir gas bar</label><input id="initial_gas_pressure_bar" type="number" step="0.1" value="6"></div>
-          <div><label>Reservoir volume cc</label><input id="reservoir_volume_cc" type="number" step="1" value="120"></div>
+          <div class="fork-only"><label>WP AER pressure psi</label><input id="air_spring_pressure_psi" type="number" step="0.1" value="171.2"></div>
+          <div class="fork-only"><label>AER piston dia mm</label><input id="air_piston_diameter_mm" type="number" step="0.1" value="35"></div>
+          <div class="fork-only"><label>AER positive volume cc</label><input id="air_positive_volume_cc" type="number" step="0.1" value="145"></div>
+          <div class="fork-only"><label>AER negative volume cc</label><input id="air_negative_volume_cc" type="number" step="0.1" value="72"></div>
+          <div class="fork-only"><label>AER negative pressure ratio</label><input id="air_negative_pressure_ratio" type="number" step="0.01" value="0.56"></div>
+          <div class="fork-only"><label>AER sag mm</label><input id="air_sag_mm" type="number" step="0.1" value="65"></div>
+          <div class="fork-only"><label>Ref pressure psi</label><input id="air_reference_pressure_psi" type="number" step="0.1" value="171.2"></div>
+          <div class="fork-only"><label>Ref steel rate N/mm</label><input id="air_reference_equivalent_rate_n_mm" type="number" step="0.01" value="9.81"></div>
+          <div class="fork-only"><label>Ref preload mm</label><input id="air_reference_preload_mm" type="number" step="0.1" value="4"></div>
+          <div class="fork-only"><label>Target equivalent rate N/mm</label><input id="air_target_rate_n_mm" type="number" step="0.01" value="9.81"></div>
+          <div class="fork-only"><label>Oil height mm</label><input id="oil_height_mm" type="number" value="110"></div>
+          <div class="fork-only"><label>Tube dia mm</label><input id="tube_inner_diameter_mm" type="number" value="48"></div>
+          <div class="fork-only"><label>Fork + chamber bar abs</label><input id="fork_positive_air_bar_abs" type="number" step="0.1" value="8"></div>
+          <div class="fork-only"><label>Fork - chamber bar abs</label><input id="fork_negative_air_bar_abs" type="number" step="0.1" value="6"></div>
+          <div class="fork-only"><label>Fork secondary cc</label><input id="fork_secondary_volume_cc" type="number" step="1" value="55"></div>
+          <div class="shock-only"><label>Reservoir gas bar</label><input id="initial_gas_pressure_bar" type="number" step="0.1" value="6"></div>
+          <div class="shock-only"><label>Reservoir volume cc</label><input id="reservoir_volume_cc" type="number" step="1" value="120"></div>
           <div><label>Max velocity m/s</label><input id="shaft_velocity_max_m_s" type="number" step="0.1" value="1.0"></div>
           <div><label>Clamp dia mm</label><input id="clamp_diameter_mm" type="number" step="0.1" value="8"></div>
         </div>
@@ -221,7 +364,7 @@
         </div>
         <div class="note">CSV must include headers with velocity and force columns. Direction column is optional.</div>
 
-        <div class="paywall">
+        <div class="paywall" id="paywallCard">
           <h4>Unlock Calculated Shim Stacks</h4>
           <div class="price">USD $100.00 / analysis</div>
           <div class="note" style="margin-top:0">Enter all setup details first, then complete payment to reveal calculated stacks and full engineering outputs.</div>
@@ -274,6 +417,8 @@
             <tr><td>Main port area</td><td id="sumPortArea">-</td></tr>
             <tr><td>Base / mid port area</td><td id="sumBaseMid">-</td></tr>
             <tr><td>Bleed / rebound area</td><td id="sumBleed">-</td></tr>
+            <tr><td>Piston bleed hole area</td><td id="sumPistonBleed">-</td></tr>
+            <tr><td>Mid float / trampoline preload</td><td id="sumMidFloatPreload">-</td></tr>
             <tr><td>Critical damping</td><td id="sumCritical">-</td></tr>
             <tr><td>Compression force @ 0.3</td><td id="sumComp03">-</td></tr>
             <tr><td>Rebound force @ 0.3</td><td id="sumReb03">-</td></tr>
@@ -334,8 +479,58 @@
     </div>
   </div>
 
+  <div id="introOverlay" class="intro-overlay" aria-hidden="true">
+    <div id="introHighlight" class="intro-highlight"></div>
+    <div class="intro-card">
+      <div class="section" style="margin-bottom:4px">Guided simulation walkthrough</div>
+      <h3 id="introTitle" class="intro-title">Welcome to Shim Calculator Engineering</h3>
+      <p id="introText" class="intro-text">This quick tour introduces where to enter setup data, how the damper animation works, and where to read the key engineering outputs.</p>
+      <div class="intro-progress"><span id="introProgressFill"></span></div>
+      <div class="intro-step-meta" id="introStepMeta">Step 1 of 5</div>
+      <div class="intro-actions">
+        <button id="introSkipBtn" class="intro-skip" type="button">Skip tour</button>
+        <div class="right">
+          <button id="introNextBtn" type="button">Next</button>
+          <button id="introDoneBtn" type="button" style="display:none">Start simulation</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="introChoiceOverlay" class="intro-choice-overlay" aria-hidden="true">
+    <div class="intro-choice-card">
+      <div class="section" style="margin-bottom:4px">Welcome</div>
+      <h3 class="intro-choice-title">Choose your walkthrough</h3>
+      <p class="intro-choice-text">Pick a guided intro style now, or skip and start tuning immediately. You can replay any tour later from the top-right buttons.</p>
+      <div class="intro-choice-teaser">
+        <div id="introChoiceTeaserScene" class="intro-choice-caption">Cinematic teaser: flow-path balance and shim response preview.</div>
+        <div class="intro-choice-progress"><span id="introChoiceTeaserProgress"></span></div>
+      </div>
+      <div class="intro-choice-actions">
+        <button id="introChoiceQuickBtn" type="button">Start quick tour (recommended)</button>
+        <button id="introChoiceDeepBtn" type="button">Start in-depth tour</button>
+        <button id="introChoiceSkipBtn" type="button" class="choice-secondary">Skip for now</button>
+        <button id="introChoiceResetBtn" type="button" class="choice-secondary">Reset first-visit memory (demo/training)</button>
+      </div>
+      <div id="introChoiceResetMsg" class="note" style="display:none;margin-top:8px">Onboarding memory reset. Refresh the page to simulate a brand-new first visit.</div>
+    </div>
+  </div>
+
+  <button id="helpTourFab" class="help-fab" type="button" aria-label="Open walkthrough options" title="Walkthrough options">?</button>
+  <div id="helpTourTip" class="help-fab-tip" role="status" aria-live="polite">Need a tour? Tap ?</div>
+
   <script>
     let dynoOverlay = {compression: [], rebound: []};
+    let latestSimulationData = null;
+    let abBaseline = null;
+    const PRESET_LABELS = {
+      kyb_sss_cartridge: 'KYB SSS cartridge baseline',
+      kyb_sss_mx_fork: 'KYB SSS MX fork (firmer race)',
+      kyb_sss_enduro_fork_crossover: 'KYB SSS Enduro fork (crossover)',
+      kyb_enduro_shock_crossover: 'KYB Enduro shock (crossover)',
+    };
+    const CROSSOVER_PRESETS = new Set(['kyb_sss_enduro_fork_crossover', 'kyb_enduro_shock_crossover']);
+    const CROSSOVER_SCALE = { min: 0.70, max: 1.35 };
     const paymentState = {
       enabled: false,
       bypass: false,
@@ -345,6 +540,180 @@
       pendingToken: '',
       pendingOrderId: '',
     };
+    const INTRO_STORAGE_KEY = 'shimstackor_intro_seen_v1';
+    const INTRO_CHOICE_STORAGE_KEY = 'shimstackor_intro_choice_seen_v1';
+    const TEASER_LOOP_MS = 20000;
+    const teaserScenes = [
+      { at: 0.00, text: 'Scene 1/5: hydraulic flow demand builds through piston and bypass paths.' },
+      { at: 0.20, text: 'Scene 2/5: shim lift increases with pressure, changing effective flow area.' },
+      { at: 0.40, text: 'Scene 3/5: low/mid/high-speed regions shift force characteristics.' },
+      { at: 0.60, text: 'Scene 4/5: cavitation margin and reservoir behavior influence consistency.' },
+      { at: 0.80, text: 'Scene 5/5: engineering outputs support clear, customer-ready decisions.' },
+    ];
+    const introTours = {
+      quick: [
+        {
+          target: '#inputsCard',
+          title: 'Enter all suspension setup details',
+          text: 'Input geometry, ports, clickers, spring, oil, air-chamber and chassis dimensions. You can use Load demo for an instant baseline.'
+        },
+        {
+          target: '#paywallCard',
+          title: 'Customer enters details before payment',
+          text: 'The full setup can be entered first. PayPal unlocks calculated shim stacks and full engineering output for this analysis.'
+        },
+        {
+          target: '#vizLockable',
+          title: 'Live damper cutaway animation',
+          text: 'The center view animates piston position, shim lift, pressure response, and flow-path split using the simulation state.'
+        },
+        {
+          target: '#summaryLockable',
+          title: 'Engineering summary and stack detail',
+          text: 'Review zeta, cavitation margin, flow split, chassis indicators, AER outputs, and input vs recommended shim stacks.'
+        },
+        {
+          target: '#chartsLockable',
+          title: 'Force, pressure, lift, and spring curves',
+          text: 'Charts show the detail behind each recommendation and make it easy to explain decisions to customers and teams.'
+        }
+      ],
+      detailed: [
+        {
+          target: '.pitch',
+          title: 'What this platform is built for',
+          text: 'Shim Calculator Engineering combines flow simulation, shim mechanics, and chassis-aware indicators so recommendations are explainable, not just guessed.'
+        },
+        {
+          target: '#inputsCard',
+          title: 'Geometry and architecture inputs',
+          text: 'Set fork/shock architecture, piston and shaft dimensions, port counts and diameters, and valve routing assumptions before running calculations.'
+        },
+        {
+          target: '#compression_stack',
+          title: 'Stack definition and valve intent',
+          text: 'Enter compression/rebound plus base and mid-valve stacks. This defines the opening behavior used to solve pressure-flow equilibrium.'
+        },
+        {
+          target: '#paywallCard',
+          title: 'Commercial flow for customer jobs',
+          text: 'Customers can complete all setup data first. Payment then unlocks generated stacks, simulation outputs, and engineering detail for that analysis.'
+        },
+        {
+          target: '#vizLockable',
+          title: 'Live cutaway animation and metrics',
+          text: 'Watch piston position, shim lift and flow-path weighting animate from solved values, while quick metrics report zeta, port area and cavitation margin.'
+        },
+        {
+          target: '#summaryLockable',
+          title: 'Engineering interpretation panel',
+          text: 'Read force at target velocity, flow split, reservoir pressure probe, chassis flags, and WP AER reverse-engineered equivalent spring outcomes.'
+        },
+        {
+          target: '#loadDynoBtn',
+          title: 'Dyno CSV overlay workflow',
+          text: 'Load dyno traces to compare measured data against model output and identify where low/mid/high-speed behavior deviates from the target.'
+        },
+        {
+          target: '#chartsLockable',
+          title: 'Decision-ready visualization',
+          text: 'Force, pressure, shim-lift and spring progression charts make it easier to justify stack changes with a transparent technical story.'
+        }
+      ]
+    };
+    const introState = {
+      running: false,
+      mode: 'quick',
+      stepIndex: 0,
+      autoTimer: null,
+      progressTimer: null,
+      demoTimer: null,
+      startedAt: 0,
+    };
+    const chooserTeaserState = {
+      timer: null,
+      startedAt: 0,
+    };
+
+    function currentIntroSteps(){
+      return introTours[introState.mode] || introTours.quick;
+    }
+
+    function teaserSceneAt(progress01){
+      let scene = teaserScenes[0];
+      for (const s of teaserScenes){
+        if (progress01 >= s.at) scene = s;
+      }
+      return scene;
+    }
+
+    function runChooserTeaserFrame(){
+      const chooser = document.getElementById('introChoiceOverlay');
+      if (!chooser.classList.contains('active')) return;
+      const elapsed = (Date.now() - chooserTeaserState.startedAt) % TEASER_LOOP_MS;
+      const progress01 = elapsed / TEASER_LOOP_MS;
+      const scene = teaserSceneAt(progress01);
+      document.getElementById('introChoiceTeaserScene').textContent = scene.text;
+      document.getElementById('introChoiceTeaserProgress').style.width = `${(progress01 * 100).toFixed(1)}%`;
+
+      // Lightweight cinematic loop tied to existing cutaway animation.
+      const phase = progress01 * Math.PI * 2;
+      const velocity = 0.08 + Math.abs(Math.sin(phase * 1.7)) * 0.9;
+      const pressure = 5200 + velocity * 30000;
+      const shimLift = 0.025 + velocity * 0.23;
+      const flowMain = Math.min(95, 54 + velocity * 41);
+      updateAnimation({
+        velocity_m_s: velocity,
+        pressure_pa: pressure,
+        shim_lift_mm: shimLift,
+        flow_main_pct: flowMain,
+        flow_bypass_pct: Math.max(5, 100 - flowMain),
+      });
+    }
+
+    function stopChooserTeaser(reset = false){
+      if (chooserTeaserState.timer) window.clearInterval(chooserTeaserState.timer);
+      chooserTeaserState.timer = null;
+      if (reset){
+        document.getElementById('introChoiceTeaserScene').textContent = 'Cinematic teaser: flow-path balance and shim response preview.';
+        document.getElementById('introChoiceTeaserProgress').style.width = '0%';
+      }
+    }
+
+    function startChooserTeaser(){
+      stopChooserTeaser();
+      chooserTeaserState.startedAt = Date.now();
+      runChooserTeaserFrame();
+      chooserTeaserState.timer = window.setInterval(runChooserTeaserFrame, 120);
+    }
+
+    function updateHelpFabState(){
+      const fab = document.getElementById('helpTourFab');
+      const tip = document.getElementById('helpTourTip');
+      const sawChoice = localStorage.getItem(INTRO_CHOICE_STORAGE_KEY) === '1';
+      const sawTour = localStorage.getItem(INTRO_STORAGE_KEY) === '1';
+      const chooserOpen = document.getElementById('introChoiceOverlay').classList.contains('active');
+      const showHint = !sawChoice && !sawTour && !chooserOpen && !introState.running;
+      fab.classList.toggle('pulse', showHint);
+      tip.classList.toggle('show', showHint);
+    }
+
+    function showIntroChoiceOverlay(){
+      const choice = document.getElementById('introChoiceOverlay');
+      choice.classList.add('active');
+      choice.setAttribute('aria-hidden', 'false');
+      document.getElementById('introChoiceResetMsg').style.display = 'none';
+      startChooserTeaser();
+      updateHelpFabState();
+    }
+
+    function hideIntroChoiceOverlay(){
+      const choice = document.getElementById('introChoiceOverlay');
+      choice.classList.remove('active');
+      choice.setAttribute('aria-hidden', 'true');
+      stopChooserTeaser(true);
+      updateHelpFabState();
+    }
 
     function setPaymentStatus(message, kind=''){
       const el = document.getElementById('paymentStatus');
@@ -386,6 +755,115 @@
       document.getElementById('aerEqRate').textContent = '-';
       document.getElementById('aerEqPreload').textContent = '-';
       document.getElementById('aerReqPsi').textContent = '-';
+    }
+
+    function clearIntroAutoplayTimers(){
+      if (introState.autoTimer) window.clearTimeout(introState.autoTimer);
+      if (introState.progressTimer) window.clearInterval(introState.progressTimer);
+      introState.autoTimer = null;
+      introState.progressTimer = null;
+    }
+
+    function stopIntroDemoAnimation(){
+      if (introState.demoTimer) window.clearInterval(introState.demoTimer);
+      introState.demoTimer = null;
+    }
+
+    function startIntroDemoAnimation(){
+      stopIntroDemoAnimation();
+      let t = 0;
+      introState.demoTimer = window.setInterval(() => {
+        if (!introState.running) return;
+        t += 0.14;
+        const velocity = 0.06 + Math.abs(Math.sin(t * 1.65)) * 0.86;
+        const pressure = 4200 + velocity * 29000;
+        const shimLift = 0.03 + velocity * 0.24;
+        const flowMain = Math.min(96, 52 + velocity * 44);
+        updateAnimation({
+          velocity_m_s: velocity,
+          pressure_pa: pressure,
+          shim_lift_mm: shimLift,
+          flow_main_pct: flowMain,
+          flow_bypass_pct: Math.max(4, 100 - flowMain),
+        });
+      }, 120);
+    }
+
+    function setIntroHighlight(targetSelector){
+      const highlight = document.getElementById('introHighlight');
+      const overlay = document.getElementById('introOverlay');
+      if (!overlay.classList.contains('active')){
+        highlight.style.display = 'none';
+        return;
+      }
+      const target = document.querySelector(targetSelector);
+      if (!target){
+        highlight.style.display = 'none';
+        return;
+      }
+      const rect = target.getBoundingClientRect();
+      const pad = 8;
+      const left = Math.max(8, rect.left - pad);
+      const top = Math.max(8, rect.top - pad);
+      const width = Math.max(40, Math.min(window.innerWidth - left - 8, rect.width + pad * 2));
+      const height = Math.max(40, Math.min(window.innerHeight - top - 8, rect.height + pad * 2));
+      highlight.style.display = 'block';
+      highlight.style.left = `${left}px`;
+      highlight.style.top = `${top}px`;
+      highlight.style.width = `${width}px`;
+      highlight.style.height = `${height}px`;
+    }
+
+    function updateIntroProgress(){
+      const steps = currentIntroSteps();
+      const fill = document.getElementById('introProgressFill');
+      const pct = steps.length ? ((introState.stepIndex + 1) / steps.length) * 100 : 0;
+      fill.style.width = `${pct.toFixed(1)}%`;
+    }
+
+    function renderIntroStep(){
+      const steps = currentIntroSteps();
+      const step = steps[introState.stepIndex];
+      document.getElementById('introTitle').textContent = step.title;
+      document.getElementById('introText').textContent = step.text;
+      const modeLabel = introState.mode === 'detailed' ? 'In-depth tour' : 'Quick tour';
+      document.getElementById('introStepMeta').textContent = `${modeLabel} - Step ${introState.stepIndex + 1} of ${steps.length}`;
+      document.getElementById('introNextBtn').style.display = introState.stepIndex < steps.length - 1 ? 'inline-flex' : 'none';
+      document.getElementById('introDoneBtn').style.display = introState.stepIndex >= steps.length - 1 ? 'inline-flex' : 'none';
+      const target = document.querySelector(step.target);
+      if (target) target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
+      window.setTimeout(() => setIntroHighlight(step.target), 240);
+      updateIntroProgress();
+    }
+
+    function endIntroTour(markAsSeen = true){
+      clearIntroAutoplayTimers();
+      stopIntroDemoAnimation();
+      introState.running = false;
+      const overlay = document.getElementById('introOverlay');
+      overlay.classList.remove('active');
+      overlay.setAttribute('aria-hidden', 'true');
+      document.getElementById('introHighlight').style.display = 'none';
+      document.body.classList.remove('tour-readable');
+      if (markAsSeen){
+        localStorage.setItem(INTRO_STORAGE_KEY, '1');
+      }
+      updateHelpFabState();
+    }
+
+    function startIntroTour(mode = 'quick', force = false){
+      if (introState.running) return;
+      introState.mode = mode in introTours ? mode : 'quick';
+      if (!force && localStorage.getItem(INTRO_STORAGE_KEY) === '1') return;
+      hideIntroChoiceOverlay();
+      introState.running = true;
+      introState.stepIndex = 0;
+      const overlay = document.getElementById('introOverlay');
+      overlay.classList.add('active');
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('tour-readable');
+      startIntroDemoAnimation();
+      renderIntroStep();
     }
 
     async function loadPayPalSdk(clientId){
@@ -480,9 +958,9 @@
     function payloadFromForm(){
       const numericIds = [
         'piston_diameter_mm','shaft_diameter_mm','port_count','port_diameter_mm','base_port_count','base_port_diameter_mm',
-        'mid_port_count','mid_port_diameter_mm','bleed_diameter_mm','rebound_orifice_diameter_mm',
+        'mid_port_count','mid_port_diameter_mm','bleed_diameter_mm','piston_bleed_hole_count','piston_bleed_hole_diameter_mm','rebound_orifice_diameter_mm',
         'low_speed_clicks_out','rebound_clicks_out','high_speed_turns_out','hsc_poppet_diameter_mm',
-        'hsc_spring_rate_n_per_mm','hsc_preload_mm','hsc_max_lift_mm','oil_temperature_c','oil_viscosity_cst',
+        'hsc_spring_rate_n_per_mm','hsc_preload_mm','hsc_max_lift_mm','mid_valve_float_mm','trampoline_preload_mm','trampoline_spring_rate_n_per_mm','oil_temperature_c','oil_viscosity_cst',
         'discharge_coefficient','spring_rate_n_per_mm','preload_mm','travel_mm','motion_ratio',
         'wheelbase_mm','steering_head_angle_deg','triple_clamp_offset_mm','front_tire_radius_mm','rear_tire_radius_mm',
         'front_ride_height_mm','rear_ride_height_mm','swingarm_length_mm','swingarm_pivot_height_mm','rear_axle_height_mm',
@@ -508,7 +986,68 @@
       return p;
     }
 
+    function updateModeVisibility(){
+      const mode = document.getElementById('mode').value === 'shock' ? 'shock' : 'fork';
+      for (const el of document.querySelectorAll('.fork-only')){
+        el.classList.toggle('mode-hidden', mode !== 'fork');
+      }
+      for (const el of document.querySelectorAll('.shock-only')){
+        el.classList.toggle('mode-hidden', mode !== 'shock');
+      }
+      document.getElementById('modeForkBtn').classList.toggle('active', mode === 'fork');
+      document.getElementById('modeShockBtn').classList.toggle('active', mode === 'shock');
+      document.getElementById('modeLabel').textContent = mode === 'shock'
+        ? 'Shock pressure-flow opening equilibrium'
+        : 'Fork pressure-flow opening equilibrium';
+      document.getElementById('modeNote').textContent = mode === 'shock'
+        ? 'Shock mode: architecture-focused settings are visible (monotube / twin-tube).'
+        : 'Fork mode: air-fork platform and chamber fields are visible.';
+    }
+
     function nearestByAbs(arr, fn){ return arr.reduce((a,b)=>Math.abs(fn(b)) < Math.abs(fn(a)) ? b : a); }
+
+    function updateAbCompareTag(currentData = null){
+      const el = document.getElementById('abCompareTag');
+      if (!abBaseline || !abBaseline.data){
+        el.textContent = 'A/B compare inactive';
+        el.classList.remove('show');
+        return;
+      }
+      let txt = `A/B compare active - A baseline: ${abBaseline.label}`;
+      const bData = currentData || latestSimulationData;
+      if (bData?.compression?.length && bData?.rebound?.length && abBaseline.data?.compression?.length && abBaseline.data?.rebound?.length){
+        const aComp = nearestByAbs(abBaseline.data.compression, p=>p.velocity_m_s - 0.3).force_n;
+        const bComp = nearestByAbs(bData.compression, p=>p.velocity_m_s - 0.3).force_n;
+        const aReb = nearestByAbs(abBaseline.data.rebound, p=>Math.abs(p.velocity_m_s) - 0.3).force_n;
+        const bReb = nearestByAbs(bData.rebound, p=>Math.abs(p.velocity_m_s) - 0.3).force_n;
+        txt += ` | ΔComp@0.3 ${(bComp - aComp).toFixed(0)} N | ΔReb@0.3 ${(Math.abs(bReb) - Math.abs(aReb)).toFixed(0)} N`;
+      }
+      el.textContent = txt;
+      el.classList.add('show');
+    }
+
+    function clearAbBaseline(){
+      abBaseline = null;
+      updateAbCompareTag(latestSimulationData);
+      if (latestSimulationData){
+        renderCharts(latestSimulationData);
+      }
+    }
+
+    function captureBaselineForAb(){
+      if (!latestSimulationData){
+        alert('Run a simulation first, then capture A baseline.');
+        return;
+      }
+      const preset = document.getElementById('presetSelect').value;
+      const mode = document.getElementById('mode').value;
+      const label = PRESET_LABELS[preset] || (mode === 'shock' ? 'Custom shock setup' : 'Custom fork setup');
+      abBaseline = {
+        label,
+        data: JSON.parse(JSON.stringify(latestSimulationData)),
+      };
+      updateAbCompareTag(latestSimulationData);
+    }
 
     function updateAnimation(point){
       const piston = document.getElementById('piston');
@@ -543,10 +1082,57 @@
       const c = data.compression;
       const r = data.rebound;
       const s = data.spring;
-      const forceTraces = [
+      const forceTraces = [];
+      const pressureTraces = [];
+      const liftTraces = [];
+      const springTraces = [];
+
+      if (abBaseline?.data){
+        const ac = abBaseline.data.compression || [];
+        const ar = abBaseline.data.rebound || [];
+        const as = abBaseline.data.spring || [];
+        forceTraces.push(
+          {x:ar.map(p=>p.velocity_m_s), y:ar.map(p=>p.force_n), mode:'lines', name:`A baseline rebound (${abBaseline.label})`, line:{dash:'dot', color:'#ffd166'}},
+          {x:ac.map(p=>p.velocity_m_s), y:ac.map(p=>p.force_n), mode:'lines', name:`A baseline compression (${abBaseline.label})`, line:{dash:'dot', color:'#ffe29a'}}
+        );
+        pressureTraces.push(
+          {x:ac.map(p=>p.velocity_m_s), y:ac.map(p=>p.pressure_pa/1e5), mode:'lines', name:'A baseline comp', line:{dash:'dot', color:'#ffd166'}},
+          {x:ar.map(p=>Math.abs(p.velocity_m_s)), y:ar.map(p=>p.pressure_pa/1e5), mode:'lines', name:'A baseline reb', line:{dash:'dot', color:'#ffe29a'}}
+        );
+
+        liftTraces.push(
+          {x:ac.map(p=>p.velocity_m_s), y:ac.map(p=>p.shim_lift_mm), mode:'lines', name:'A baseline comp lift', line:{dash:'dot', color:'#ffd166'}},
+          {x:ar.map(p=>Math.abs(p.velocity_m_s)), y:ar.map(p=>p.shim_lift_mm), mode:'lines', name:'A baseline reb lift', line:{dash:'dot', color:'#ffe29a'}}
+        );
+
+        springTraces.push(
+          {x:as.map(p=>p.travel_mm), y:as.map(p=>p.combined_force_n), mode:'lines', name:`A baseline combined (${abBaseline.label})`, line:{dash:'dot', color:'#ffd166'}}
+        );
+      }
+
+      pressureTraces.push(
+        {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Compression'},
+        {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Rebound'}
+      );
+      Plotly.newPlot('pressureChart', pressureTraces, baseLayout('Valve pressure drop', '|Velocity| (m/s)', 'DeltaP (bar)'));
+
+      liftTraces.push(
+        {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston comp lift'},
+        {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston reb lift'}
+      );
+      Plotly.newPlot('liftChart', liftTraces, baseLayout('Shim lift vs velocity', '|Velocity| (m/s)', 'Lift (mm)'));
+
+      springTraces.push(
+        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.spring_force_n), mode:'lines', name:'Mechanical spring'},
+        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.air_force_n), mode:'lines', name:'Air/gas force'},
+        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.combined_force_n), mode:'lines', name:'Combined'}
+      );
+      Plotly.newPlot('springChart', springTraces, baseLayout('Spring and chamber progression', 'Travel (mm)', 'Force (N)'));
+
+      forceTraces.push(
         {x:r.map(p=>p.velocity_m_s), y:r.map(p=>p.force_n), mode:'lines', name:'Model rebound'},
         {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.force_n), mode:'lines', name:'Model compression'}
-      ];
+      );
       if (dynoOverlay.compression.length){
         forceTraces.push({x:dynoOverlay.compression.map(p=>p.velocity_m_s), y:dynoOverlay.compression.map(p=>p.force_n), mode:'markers', marker:{size:6}, name:'Dyno compression'});
       }
@@ -554,19 +1140,6 @@
         forceTraces.push({x:dynoOverlay.rebound.map(p=>p.velocity_m_s), y:dynoOverlay.rebound.map(p=>p.force_n), mode:'markers', marker:{size:6}, name:'Dyno rebound'});
       }
       Plotly.newPlot('forceChart', forceTraces, baseLayout('Force vs shaft velocity', 'Velocity (m/s)', 'Force (N)'));
-      Plotly.newPlot('pressureChart', [
-        {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Compression'},
-        {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Rebound'}
-      ], baseLayout('Valve pressure drop', '|Velocity| (m/s)', 'DeltaP (bar)'));
-      Plotly.newPlot('liftChart', [
-        {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston comp lift'},
-        {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston reb lift'}
-      ], baseLayout('Shim lift vs velocity', '|Velocity| (m/s)', 'Lift (mm)'));
-      Plotly.newPlot('springChart', [
-        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.spring_force_n), mode:'lines', name:'Mechanical spring'},
-        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.air_force_n), mode:'lines', name:'Air/gas force'},
-        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.combined_force_n), mode:'lines', name:'Combined'}
-      ], baseLayout('Spring and chamber progression', 'Travel (mm)', 'Force (N)'));
     }
 
     function updateSummary(data){
@@ -583,6 +1156,8 @@
       document.getElementById('sumPortArea').textContent = data.summary.total_port_area_mm2.toFixed(1) + ' mm2';
       document.getElementById('sumBaseMid').textContent = data.summary.base_port_area_mm2.toFixed(1) + ' / ' + data.summary.mid_port_area_mm2.toFixed(1) + ' mm2';
       document.getElementById('sumBleed').textContent = data.summary.bleed_area_mm2.toFixed(2) + ' / ' + data.summary.rebound_orifice_area_mm2.toFixed(2) + ' mm2';
+      document.getElementById('sumPistonBleed').textContent = data.summary.piston_bleed_area_mm2.toFixed(2) + ' mm2';
+      document.getElementById('sumMidFloatPreload').textContent = `${data.summary.mid_valve_float_mm.toFixed(2)} mm / ${data.summary.trampoline_preload_mm.toFixed(2)} mm (${data.summary.mid_trampoline_threshold_bar_at_03.toFixed(2)} bar @0.3)`;
       document.getElementById('sumCritical').textContent = data.summary.critical_damping_n_s_m.toFixed(0) + ' N*s/m';
       document.getElementById('sumComp03').textContent = comp03.force_n.toFixed(0) + ' N';
       document.getElementById('sumReb03').textContent = Math.abs(reb03.force_n).toFixed(0) + ' N';
@@ -639,9 +1214,11 @@
           throw new Error(data.error || 'Simulation failed');
         }
         setLocked(false);
+        latestSimulationData = data;
         renderCharts(data);
         updateSummary(data);
         updateStackTables(data.stacks);
+        updateAbCompareTag(data);
       }catch(err){
         alert(String(err.message || err));
         console.error(err);
@@ -664,52 +1241,214 @@
       simulate();
     }
 
+    function setFormValues(values){
+      for (const [id, value] of Object.entries(values)){
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.type === 'checkbox'){
+          el.checked = Boolean(value);
+        } else {
+          el.value = String(value);
+        }
+      }
+    }
+
+    function crossoverIntensityValue(){
+      return Number(document.getElementById('crossoverIntensity')?.value || 50);
+    }
+
+    function updateCrossoverIntensityLabel(){
+      const value = crossoverIntensityValue();
+      let tone = 'Medium';
+      if (value <= 30) tone = 'Soft';
+      else if (value >= 70) tone = 'Firm';
+      const el = document.getElementById('crossoverIntensityValue');
+      if (el) el.textContent = `${tone} (${value}%)`;
+    }
+
+    function parseStackRows(textValue){
+      return String(textValue || '').trim().split(/\n+/).filter(Boolean).map((line) => {
+        const [diameter, thickness, qty] = line.split(',').map(v => Number(String(v).trim()));
+        return { diameter, thickness, qty };
+      });
+    }
+
+    function formatStackRows(rows){
+      return rows.map(r => `${r.diameter.toFixed(0)},${r.thickness.toFixed(2)},${Math.max(1, Math.round(r.qty))}`).join('\n');
+    }
+
+    function applyCrossoverIntensity(stacks, presetName){
+      if (!CROSSOVER_PRESETS.has(presetName)) return stacks;
+      const pct = crossoverIntensityValue() / 100;
+      const factor = CROSSOVER_SCALE.min + (CROSSOVER_SCALE.max - CROSSOVER_SCALE.min) * pct;
+      const out = {...stacks};
+      for (const [k, v] of Object.entries(stacks || {})){
+        const rows = parseStackRows(v);
+        if (rows.length < 3){
+          out[k] = v;
+          continue;
+        }
+        const startIdx = Math.max(1, rows.length - 2);
+        for (let i = startIdx; i < rows.length; i += 1){
+          const scaledQty = Math.max(1, Math.round(rows[i].qty * factor));
+          if (rows[i].qty === 1 && scaledQty === 1){
+            rows[i].thickness = Math.max(0.05, Number((rows[i].thickness * factor).toFixed(2)));
+          } else {
+            rows[i].qty = scaledQty;
+          }
+        }
+        out[k] = formatStackRows(rows);
+      }
+      return out;
+    }
+
     function loadDemo(){
-      document.getElementById('mode').value = 'fork';
-      document.getElementById('fork_platform').value = 'kyb_psf2';
-      document.getElementById('shock_architecture').value = 'monotube';
-      document.getElementById('port_diameter_mm').value = '6.2';
-      document.getElementById('base_port_diameter_mm').value = '5.8';
-      document.getElementById('mid_port_diameter_mm').value = '4.7';
-      document.getElementById('low_speed_clicks_out').value = '14';
-      document.getElementById('rebound_clicks_out').value = '13';
-      document.getElementById('high_speed_turns_out').value = '1.9';
-      document.getElementById('hsc_preload_mm').value = '0.9';
-      document.getElementById('spring_rate_n_per_mm').value = '4.8';
-      document.getElementById('travel_mm').value = '310';
-      document.getElementById('wheelbase_mm').value = '1480';
-      document.getElementById('steering_head_angle_deg').value = '24.0';
-      document.getElementById('triple_clamp_offset_mm').value = '32';
-      document.getElementById('front_tire_radius_mm').value = '340';
-      document.getElementById('rear_tire_radius_mm').value = '340';
-      document.getElementById('front_ride_height_mm').value = '0';
-      document.getElementById('rear_ride_height_mm').value = '6';
-      document.getElementById('swingarm_length_mm').value = '610';
-      document.getElementById('swingarm_pivot_height_mm').value = '360';
-      document.getElementById('rear_axle_height_mm').value = '330';
-      document.getElementById('countershaft_height_mm').value = '350';
-      document.getElementById('countershaft_to_rear_axle_mm').value = '580';
-      document.getElementById('cg_height_mm').value = '600';
-      document.getElementById('cg_from_front_axle_mm').value = '780';
-      document.getElementById('air_spring_pressure_psi').value = '171.2';
-      document.getElementById('air_piston_diameter_mm').value = '35.0';
-      document.getElementById('air_positive_volume_cc').value = '145';
-      document.getElementById('air_negative_volume_cc').value = '72';
-      document.getElementById('air_negative_pressure_ratio').value = '0.56';
-      document.getElementById('air_sag_mm').value = '65';
-      document.getElementById('air_reference_pressure_psi').value = '171.2';
-      document.getElementById('air_reference_equivalent_rate_n_mm').value = '9.81';
-      document.getElementById('air_reference_preload_mm').value = '4.0';
-      document.getElementById('air_target_rate_n_mm').value = '9.81';
-      document.getElementById('oil_height_mm').value = '105';
-      document.getElementById('fork_positive_air_bar_abs').value = '8.8';
-      document.getElementById('fork_negative_air_bar_abs').value = '6.4';
-      document.getElementById('compression_stack').value = '24,0.15,8\n22,0.15,2\n20,0.10,1';
-      document.getElementById('rebound_stack').value = '22,0.15,6\n20,0.15,2\n18,0.10,1';
-      document.getElementById('base_valve_stack').value = '22,0.15,4\n20,0.15,2';
-      document.getElementById('mid_valve_stack').value = '20,0.10,3\n18,0.10,2';
+      setFormValues({
+        mode: 'fork',
+        fork_platform: 'kyb_psf2',
+        shock_architecture: 'monotube',
+        port_diameter_mm: '6.2',
+        base_port_diameter_mm: '5.8',
+        mid_port_diameter_mm: '4.7',
+        low_speed_clicks_out: '14',
+        rebound_clicks_out: '13',
+        high_speed_turns_out: '1.9',
+        hsc_preload_mm: '0.9',
+        piston_bleed_hole_count: '2',
+        piston_bleed_hole_diameter_mm: '0.8',
+        mid_valve_float_mm: '0.12',
+        trampoline_preload_mm: '0.06',
+        trampoline_spring_rate_n_per_mm: '20.0',
+        spring_rate_n_per_mm: '4.8',
+        travel_mm: '310',
+        wheelbase_mm: '1480',
+        steering_head_angle_deg: '24.0',
+        triple_clamp_offset_mm: '32',
+        front_tire_radius_mm: '340',
+        rear_tire_radius_mm: '340',
+        front_ride_height_mm: '0',
+        rear_ride_height_mm: '6',
+        swingarm_length_mm: '610',
+        swingarm_pivot_height_mm: '360',
+        rear_axle_height_mm: '330',
+        countershaft_height_mm: '350',
+        countershaft_to_rear_axle_mm: '580',
+        cg_height_mm: '600',
+        cg_from_front_axle_mm: '780',
+        air_spring_pressure_psi: '171.2',
+        air_piston_diameter_mm: '35.0',
+        air_positive_volume_cc: '145',
+        air_negative_volume_cc: '72',
+        air_negative_pressure_ratio: '0.56',
+        air_sag_mm: '65',
+        air_reference_pressure_psi: '171.2',
+        air_reference_equivalent_rate_n_mm: '9.81',
+        air_reference_preload_mm: '4.0',
+        air_target_rate_n_mm: '9.81',
+        oil_height_mm: '105',
+        fork_positive_air_bar_abs: '8.8',
+        fork_negative_air_bar_abs: '6.4',
+        compression_stack: '24,0.15,8\n22,0.15,2\n20,0.10,1',
+        rebound_stack: '22,0.15,6\n20,0.15,2\n18,0.10,1',
+        base_valve_stack: '22,0.15,4\n20,0.15,2',
+        mid_valve_stack: '20,0.10,3\n18,0.10,2',
+      });
+      updateModeVisibility();
       if (paymentState.paid || paymentState.bypass) simulate();
     }
+
+    function applyPreset(name){
+      const profiles = {
+        kyb_sss_cartridge: {
+          values: {
+            mode: 'fork', fork_platform: 'coil', shock_architecture: 'monotube',
+            piston_diameter_mm: '24.0', shaft_diameter_mm: '12.0',
+            port_count: '4', port_diameter_mm: '6.1', base_port_count: '4', base_port_diameter_mm: '5.8', mid_port_count: '3', mid_port_diameter_mm: '4.8',
+            bleed_diameter_mm: '0.90', piston_bleed_hole_count: '2', piston_bleed_hole_diameter_mm: '0.80', rebound_orifice_diameter_mm: '1.20',
+            low_speed_clicks_out: '12', rebound_clicks_out: '12', high_speed_turns_out: '1.5',
+            hsc_poppet_diameter_mm: '6.0', hsc_spring_rate_n_per_mm: '18.0', hsc_preload_mm: '1.0', hsc_max_lift_mm: '1.0',
+            mid_valve_float_mm: '0.12', trampoline_preload_mm: '0.06', trampoline_spring_rate_n_per_mm: '20.0',
+            spring_rate_n_per_mm: '4.8', preload_mm: '5.0', travel_mm: '310', motion_ratio: '1.0',
+            oil_height_mm: '105', tube_inner_diameter_mm: '48', fork_positive_air_bar_abs: '8.8', fork_negative_air_bar_abs: '6.4', fork_secondary_volume_cc: '55',
+            include_base_valve: true, include_mid_valve: true,
+          },
+          stacks: {
+            compression_stack: '24,0.15,8\n22,0.15,2\n20,0.10,1',
+            rebound_stack: '22,0.15,6\n20,0.15,2\n18,0.10,1',
+            base_valve_stack: '22,0.15,4\n20,0.15,2',
+            mid_valve_stack: '20,0.10,3\n18,0.10,2',
+          },
+        },
+        kyb_sss_mx_fork: {
+          values: {
+            mode: 'fork', fork_platform: 'coil', shock_architecture: 'monotube',
+            piston_diameter_mm: '24.0', shaft_diameter_mm: '12.0',
+            port_count: '4', port_diameter_mm: '6.0', base_port_count: '4', base_port_diameter_mm: '5.7', mid_port_count: '3', mid_port_diameter_mm: '4.7',
+            bleed_diameter_mm: '0.85', piston_bleed_hole_count: '1', piston_bleed_hole_diameter_mm: '0.75', rebound_orifice_diameter_mm: '1.10',
+            low_speed_clicks_out: '10', rebound_clicks_out: '10', high_speed_turns_out: '1.25',
+            mid_valve_float_mm: '0.10', trampoline_preload_mm: '0.08', trampoline_spring_rate_n_per_mm: '24.0',
+            spring_rate_n_per_mm: '4.9', preload_mm: '5.0', travel_mm: '310', motion_ratio: '1.0',
+            include_base_valve: true, include_mid_valve: true,
+          },
+          stacks: {
+            compression_stack: '24,0.15,9\n22,0.15,3\n20,0.10,1',
+            rebound_stack: '22,0.15,7\n20,0.15,3\n18,0.10,1',
+            base_valve_stack: '22,0.15,5\n20,0.15,3',
+            mid_valve_stack: '20,0.10,3\n18,0.10,2',
+          },
+        },
+        kyb_sss_enduro_fork_crossover: {
+          values: {
+            mode: 'fork', fork_platform: 'coil', shock_architecture: 'monotube',
+            piston_diameter_mm: '24.0', shaft_diameter_mm: '12.0',
+            port_count: '4', port_diameter_mm: '6.1', base_port_count: '4', base_port_diameter_mm: '5.8', mid_port_count: '3', mid_port_diameter_mm: '4.8',
+            bleed_diameter_mm: '0.95', piston_bleed_hole_count: '2', piston_bleed_hole_diameter_mm: '0.85', rebound_orifice_diameter_mm: '1.25',
+            low_speed_clicks_out: '14', rebound_clicks_out: '14', high_speed_turns_out: '1.75',
+            mid_valve_float_mm: '0.14', trampoline_preload_mm: '0.04', trampoline_spring_rate_n_per_mm: '18.0',
+            spring_rate_n_per_mm: '4.6', preload_mm: '4.0', travel_mm: '310', motion_ratio: '1.0',
+            include_base_valve: true, include_mid_valve: true,
+          },
+          stacks: {
+            compression_stack: '24,0.15,6\n22,0.15,2\n20,0.10,1\n17,0.10,1\n14,0.10,1',
+            rebound_stack: '22,0.15,5\n20,0.15,2\n18,0.10,1\n16,0.10,1',
+            base_valve_stack: '22,0.15,4\n20,0.15,2\n16,0.10,1',
+            mid_valve_stack: '20,0.10,2\n18,0.10,1\n15,0.10,1',
+          },
+        },
+        kyb_enduro_shock_crossover: {
+          values: {
+            mode: 'shock', fork_platform: 'coil', shock_architecture: 'monotube',
+            piston_diameter_mm: '46.0', shaft_diameter_mm: '16.0',
+            port_count: '4', port_diameter_mm: '5.2', base_port_count: '3', base_port_diameter_mm: '5.0', mid_port_count: '3', mid_port_diameter_mm: '4.2',
+            bleed_diameter_mm: '0.80', piston_bleed_hole_count: '1', piston_bleed_hole_diameter_mm: '0.70', rebound_orifice_diameter_mm: '1.05',
+            low_speed_clicks_out: '16', rebound_clicks_out: '15', high_speed_turns_out: '1.9',
+            spring_rate_n_per_mm: '58.0', preload_mm: '8.0', travel_mm: '120', motion_ratio: '2.9',
+            initial_gas_pressure_bar: '7.5', reservoir_volume_cc: '140',
+            include_base_valve: true, include_mid_valve: true,
+          },
+          stacks: {
+            compression_stack: '34,0.20,6\n32,0.20,2\n30,0.15,1\n26,0.10,1',
+            rebound_stack: '32,0.20,5\n30,0.20,2\n28,0.15,1\n24,0.10,1',
+            base_valve_stack: '30,0.20,3\n28,0.15,2',
+            mid_valve_stack: '28,0.15,2\n24,0.10,1',
+          },
+        },
+      };
+
+      const profile = profiles[name];
+      if (!profile) return;
+
+      const adjustedStacks = applyCrossoverIntensity(profile.stacks || {}, name);
+      setFormValues({
+        ...(profile.values || {}),
+        ...adjustedStacks,
+        presetSelect: name,
+      });
+      updateModeVisibility();
+      updateAbCompareTag(latestSimulationData);
+    }
+
+
 
     async function initApp(){
       const savedToken = localStorage.getItem('shimstackor_payment_token');
@@ -726,11 +1465,109 @@
       if (paymentState.paid || paymentState.bypass) setLocked(false);
       else resetLockedOutputs();
       loadDemo();
+      updateCrossoverIntensityLabel();
+      updateHelpFabState();
+      updateAbCompareTag();
+      const sawChoice = localStorage.getItem(INTRO_CHOICE_STORAGE_KEY) === '1';
+      const sawTour = localStorage.getItem(INTRO_STORAGE_KEY) === '1';
+      window.setTimeout(() => {
+        if (!sawTour && !sawChoice) showIntroChoiceOverlay();
+      }, 500);
     }
 
+    document.getElementById('introSkipBtn').addEventListener('click', () => endIntroTour(true));
+    document.getElementById('introNextBtn').addEventListener('click', () => {
+      const steps = currentIntroSteps();
+      if (!introState.running || introState.stepIndex >= steps.length - 1) return;
+      introState.stepIndex += 1;
+      renderIntroStep();
+    });
+    document.getElementById('introDoneBtn').addEventListener('click', () => endIntroTour(true));
+    document.getElementById('replayIntroBtn').addEventListener('click', () => {
+      endIntroTour(false);
+      startIntroTour('quick', true);
+    });
+    document.getElementById('replayIntroDeepBtn').addEventListener('click', () => {
+      endIntroTour(false);
+      startIntroTour('detailed', true);
+    });
+    document.getElementById('introChoiceQuickBtn').addEventListener('click', () => {
+      localStorage.setItem(INTRO_CHOICE_STORAGE_KEY, '1');
+      startIntroTour('quick', true);
+    });
+    document.getElementById('introChoiceDeepBtn').addEventListener('click', () => {
+      localStorage.setItem(INTRO_CHOICE_STORAGE_KEY, '1');
+      startIntroTour('detailed', true);
+    });
+    document.getElementById('introChoiceSkipBtn').addEventListener('click', () => {
+      localStorage.setItem(INTRO_CHOICE_STORAGE_KEY, '1');
+      localStorage.setItem(INTRO_STORAGE_KEY, '1');
+      hideIntroChoiceOverlay();
+      updateHelpFabState();
+    });
+    document.getElementById('introChoiceResetBtn').addEventListener('click', () => {
+      localStorage.removeItem(INTRO_CHOICE_STORAGE_KEY);
+      localStorage.removeItem(INTRO_STORAGE_KEY);
+      document.getElementById('introChoiceResetMsg').style.display = 'block';
+      updateHelpFabState();
+    });
+    document.getElementById('modeForkBtn').addEventListener('click', () => {
+      document.getElementById('mode').value = 'fork';
+      updateModeVisibility();
+    });
+    document.getElementById('modeShockBtn').addEventListener('click', () => {
+      document.getElementById('mode').value = 'shock';
+      updateModeVisibility();
+    });
+    document.getElementById('mode').addEventListener('change', updateModeVisibility);
+    document.getElementById('applyPresetBtn').addEventListener('click', () => {
+      const preset = document.getElementById('presetSelect').value;
+      if (!preset || preset === 'none'){
+        alert('Select a preset first.');
+        return;
+      }
+      applyPreset(preset);
+      if (paymentState.paid || paymentState.bypass) simulate();
+    });
+    document.getElementById('captureAbBtn').addEventListener('click', () => {
+      captureBaselineForAb();
+    });
+    document.getElementById('clearAbBtn').addEventListener('click', () => {
+      clearAbBaseline();
+    });
+    document.getElementById('crossoverIntensity').addEventListener('input', () => {
+      updateCrossoverIntensityLabel();
+      const preset = document.getElementById('presetSelect').value;
+      if (CROSSOVER_PRESETS.has(preset)){
+        applyPreset(preset);
+        if (paymentState.paid || paymentState.bypass) simulate();
+      }
+    });
+    document.getElementById('helpTourFab').addEventListener('click', () => {
+      endIntroTour(false);
+      showIntroChoiceOverlay();
+      updateHelpFabState();
+    });
+    window.addEventListener('resize', () => {
+      if (!introState.running) return;
+      setIntroHighlight(currentIntroSteps()[introState.stepIndex].target);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && introState.running){
+        endIntroTour(true);
+      } else if (e.key === 'Escape'){
+        const chooser = document.getElementById('introChoiceOverlay');
+        if (chooser.classList.contains('active')){
+          localStorage.setItem(INTRO_CHOICE_STORAGE_KEY, '1');
+          hideIntroChoiceOverlay();
+          updateHelpFabState();
+        }
+      }
+    });
     document.getElementById('simulateBtn').addEventListener('click', simulate);
     document.getElementById('demoBtn').addEventListener('click', loadDemo);
     document.getElementById('loadDynoBtn').addEventListener('click', loadDynoCsv);
+    updateModeVisibility();
     initApp();
   </script>
 </body>
