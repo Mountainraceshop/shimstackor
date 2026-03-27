@@ -162,6 +162,16 @@
           <div><label>Countershaft to rear axle mm</label><input id="countershaft_to_rear_axle_mm" type="number" step="0.1" value="580"></div>
           <div><label>CG height mm</label><input id="cg_height_mm" type="number" step="0.1" value="600"></div>
           <div><label>CG from front axle mm</label><input id="cg_from_front_axle_mm" type="number" step="0.1" value="780"></div>
+          <div><label>WP AER pressure psi</label><input id="air_spring_pressure_psi" type="number" step="0.1" value="171.2"></div>
+          <div><label>AER piston dia mm</label><input id="air_piston_diameter_mm" type="number" step="0.1" value="35"></div>
+          <div><label>AER positive volume cc</label><input id="air_positive_volume_cc" type="number" step="0.1" value="145"></div>
+          <div><label>AER negative volume cc</label><input id="air_negative_volume_cc" type="number" step="0.1" value="72"></div>
+          <div><label>AER negative pressure ratio</label><input id="air_negative_pressure_ratio" type="number" step="0.01" value="0.56"></div>
+          <div><label>AER sag mm</label><input id="air_sag_mm" type="number" step="0.1" value="65"></div>
+          <div><label>Ref pressure psi</label><input id="air_reference_pressure_psi" type="number" step="0.1" value="171.2"></div>
+          <div><label>Ref steel rate N/mm</label><input id="air_reference_equivalent_rate_n_mm" type="number" step="0.01" value="9.81"></div>
+          <div><label>Ref preload mm</label><input id="air_reference_preload_mm" type="number" step="0.1" value="4"></div>
+          <div><label>Target equivalent rate N/mm</label><input id="air_target_rate_n_mm" type="number" step="0.01" value="9.81"></div>
           <div><label>Oil height mm</label><input id="oil_height_mm" type="number" value="110"></div>
           <div><label>Tube dia mm</label><input id="tube_inner_diameter_mm" type="number" value="48"></div>
           <div><label>Fork + chamber bar abs</label><input id="fork_positive_air_bar_abs" type="number" step="0.1" value="8"></div>
@@ -284,6 +294,9 @@
             <tr><td>Static weight split F/R</td><td id="chWeight">-</td></tr>
             <tr><td>Wheel rate F/R</td><td id="chWheelRate">-</td></tr>
             <tr><td>Handling flags</td><td id="chFlags">-</td></tr>
+            <tr><td>WP AER equivalent rate</td><td id="aerEqRate">-</td></tr>
+            <tr><td>WP AER equivalent preload</td><td id="aerEqPreload">-</td></tr>
+            <tr><td>Required psi for target rate</td><td id="aerReqPsi">-</td></tr>
           </table>
           <div class="section" style="margin-top:12px">Shim stacks</div>
           <div class="stack-panels">
@@ -370,6 +383,9 @@
       document.getElementById('rebZeta').textContent = '-';
       document.getElementById('portArea').textContent = '-';
       document.getElementById('cavMargin').textContent = '-';
+      document.getElementById('aerEqRate').textContent = '-';
+      document.getElementById('aerEqPreload').textContent = '-';
+      document.getElementById('aerReqPsi').textContent = '-';
     }
 
     async function loadPayPalSdk(clientId){
@@ -470,7 +486,10 @@
         'discharge_coefficient','spring_rate_n_per_mm','preload_mm','travel_mm','motion_ratio',
         'wheelbase_mm','steering_head_angle_deg','triple_clamp_offset_mm','front_tire_radius_mm','rear_tire_radius_mm',
         'front_ride_height_mm','rear_ride_height_mm','swingarm_length_mm','swingarm_pivot_height_mm','rear_axle_height_mm',
-        'countershaft_height_mm','countershaft_to_rear_axle_mm','cg_height_mm','cg_from_front_axle_mm','oil_height_mm',
+        'countershaft_height_mm','countershaft_to_rear_axle_mm','cg_height_mm','cg_from_front_axle_mm',
+        'air_spring_pressure_psi','air_piston_diameter_mm','air_positive_volume_cc','air_negative_volume_cc',
+        'air_negative_pressure_ratio','air_sag_mm','air_reference_pressure_psi','air_reference_equivalent_rate_n_mm',
+        'air_reference_preload_mm','air_target_rate_n_mm','oil_height_mm',
         'tube_inner_diameter_mm','fork_positive_air_bar_abs','fork_negative_air_bar_abs','fork_secondary_volume_cc',
         'initial_gas_pressure_bar','reservoir_volume_cc','shaft_velocity_max_m_s','clamp_diameter_mm'
       ];
@@ -583,6 +602,16 @@
       document.getElementById('chWheelRate').textContent = `${(ch.wheel_rate_front_n_mm || 0).toFixed(2)} / ${(ch.wheel_rate_rear_n_mm || 0).toFixed(2)} N/mm`;
       const flags = ch.handling_flags || {};
       document.getElementById('chFlags').textContent = `${flags.trail_balance || '-'}; ${flags.anti_squat_balance || '-'}`;
+      const aer = data.air_fork_reverse_engineering || {};
+      if (aer.available){
+        document.getElementById('aerEqRate').textContent = `${(aer.equivalent_rate_n_mm_calibrated || 0).toFixed(2)} N/mm`;
+        document.getElementById('aerEqPreload').textContent = `${(aer.equivalent_preload_mm_calibrated || 0).toFixed(2)} mm`;
+        document.getElementById('aerReqPsi').textContent = `${(aer.required_pressure_psi_for_target_rate || 0).toFixed(2)} psi`;
+      } else {
+        document.getElementById('aerEqRate').textContent = 'Fork-only';
+        document.getElementById('aerEqPreload').textContent = 'Fork-only';
+        document.getElementById('aerReqPsi').textContent = 'Fork-only';
+      }
       updateAnimation(comp03);
     }
 
@@ -662,6 +691,16 @@
       document.getElementById('countershaft_to_rear_axle_mm').value = '580';
       document.getElementById('cg_height_mm').value = '600';
       document.getElementById('cg_from_front_axle_mm').value = '780';
+      document.getElementById('air_spring_pressure_psi').value = '171.2';
+      document.getElementById('air_piston_diameter_mm').value = '35.0';
+      document.getElementById('air_positive_volume_cc').value = '145';
+      document.getElementById('air_negative_volume_cc').value = '72';
+      document.getElementById('air_negative_pressure_ratio').value = '0.56';
+      document.getElementById('air_sag_mm').value = '65';
+      document.getElementById('air_reference_pressure_psi').value = '171.2';
+      document.getElementById('air_reference_equivalent_rate_n_mm').value = '9.81';
+      document.getElementById('air_reference_preload_mm').value = '4.0';
+      document.getElementById('air_target_rate_n_mm').value = '9.81';
       document.getElementById('oil_height_mm').value = '105';
       document.getElementById('fork_positive_air_bar_abs').value = '8.8';
       document.getElementById('fork_negative_air_bar_abs').value = '6.4';
