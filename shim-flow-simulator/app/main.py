@@ -34,6 +34,7 @@ STEEL_E = 210e9
 POISSON = 0.30
 DEFAULT_GAMMA = 1.4
 ATM_PA = 101325.0
+PSI_TO_PA = 6894.757293168
 PAYMENT_AMOUNT_USD = "100.00"
 PAYMENT_CURRENCY = "USD"
 
@@ -108,6 +109,18 @@ class SimulationInput(BaseModel):
     cg_height_mm: float = Field(600.0, gt=100)
     cg_from_front_axle_mm: float = Field(780.0, gt=0)
 
+    # Air-fork reverse engineering (KTM/WP AER style)
+    air_spring_pressure_psi: float = Field(171.2, gt=1, le=400)
+    air_piston_diameter_mm: float = Field(35.0, gt=5, le=100)
+    air_positive_volume_cc: float = Field(145.0, gt=5, le=1000)
+    air_negative_volume_cc: float = Field(72.0, gt=2, le=1000)
+    air_negative_pressure_ratio: float = Field(0.56, gt=0.1, lt=1.2)
+    air_sag_mm: float = Field(65.0, gt=1, le=200)
+    air_reference_pressure_psi: float = Field(171.2, gt=1, le=400)
+    air_reference_equivalent_rate_n_mm: float = Field(9.81, gt=0.1, le=60)
+    air_reference_preload_mm: float = Field(4.0, ge=0, le=50)
+    air_target_rate_n_mm: float = Field(9.81, gt=0.1, le=60)
+
     # Fork spring / chamber inputs
     oil_height_mm: float = Field(110.0, gt=1)
     tube_inner_diameter_mm: float = Field(48.0, gt=1)
@@ -178,6 +191,14 @@ def mm_to_m(v: float) -> float:
 
 def bar_to_pa(v: float) -> float:
     return v * 1e5
+
+
+def psi_to_pa(v: float) -> float:
+    return v * PSI_TO_PA
+
+
+def pa_to_psi(v: float) -> float:
+    return v / PSI_TO_PA
 
 
 def round_port_area_m2(count: int, diameter_mm: float) -> float:
@@ -639,6 +660,83 @@ def chassis_measurement(inp: SimulationInput) -> dict:
     }
 
 
+def air_fork_reverse_engineering(inp: SimulationInput) -> dict:
+    if resolved_machine_type(inp) != "fork":
+        return {
+            "available": False,
+            "reason": "Air spring reverse engineering is fork-only.",
+        }
+
+    gamma = DEFAULT_GAMMA
+    area = single_orifice_area_m2(inp.air_piston_diameter_mm)
+    v_pos0 = max(inp.air_positive_volume_cc * 1e-6, area * 0.01)
+    v_neg0 = max(inp.air_negative_volume_cc * 1e-6, area * 0.005)
+    x_sag = mm_to_m(inp.air_sag_mm)
+    dx = mm_to_m(0.5)
+    p_atm = ATM_PA
+
+    def state_for_pressure(pressure_psi: float) -> tuple[float, float, float]:
+        p_pos0 = psi_to_pa(pressure_psi) + p_atm
+        p_neg0 = p_atm + (p_pos0 - p_atm) * inp.air_negative_pressure_ratio
+
+        def force_at_travel(travel_m: float) -> float:
+            v_pos = max(v_pos0 - area * travel_m, v_pos0 * 0.08)
+            v_neg = max(v_neg0 + area * travel_m, v_neg0 * 0.20)
+            p_pos = p_pos0 * (v_pos0 / v_pos) ** gamma
+            p_neg = p_neg0 * (v_neg0 / v_neg) ** gamma
+            return (p_pos - p_neg) * area
+
+        f_sag = force_at_travel(x_sag)
+        f_hi = force_at_travel(x_sag + dx)
+        f_lo = force_at_travel(max(x_sag - dx, 0.0))
+        k_n_m = (f_hi - f_lo) / max((2.0 * dx), 1e-9)
+        k_n_mm = max(k_n_m / 1000.0, 1e-6)
+        preload_mm = max((f_sag / max(k_n_m, 1e-6)) * 1000.0 - inp.air_sag_mm, 0.0)
+        return f_sag, k_n_mm, preload_mm
+
+    f_sag, k_model_n_mm, preload_model_mm = state_for_pressure(inp.air_spring_pressure_psi)
+    _, k_ref_n_mm, preload_ref_model_mm = state_for_pressure(inp.air_reference_pressure_psi)
+
+    # Scale factor aligns model to known KTM/WP reference behavior at a known pressure.
+    calibration_factor = inp.air_reference_equivalent_rate_n_mm / max(k_ref_n_mm, 1e-6)
+    k_calibrated_n_mm = k_model_n_mm * calibration_factor
+    preload_calibrated_mm = preload_model_mm
+
+    target_rate_model_space = inp.air_target_rate_n_mm / max(calibration_factor, 1e-6)
+
+    def rate_for_pressure(pressure_psi: float) -> float:
+        return state_for_pressure(pressure_psi)[1]
+
+    lo_psi, hi_psi = 20.0, 320.0
+    for _ in range(40):
+        mid = 0.5 * (lo_psi + hi_psi)
+        if rate_for_pressure(mid) > target_rate_model_space:
+            hi_psi = mid
+        else:
+            lo_psi = mid
+    req_pressure_psi = 0.5 * (lo_psi + hi_psi)
+
+    return {
+        "available": True,
+        "input_pressure_psi": inp.air_spring_pressure_psi,
+        "equivalent_rate_n_mm_modeled": k_model_n_mm,
+        "equivalent_rate_n_mm_calibrated": k_calibrated_n_mm,
+        "equivalent_preload_mm_modeled": preload_model_mm,
+        "equivalent_preload_mm_calibrated": preload_calibrated_mm,
+        "target_rate_n_mm": inp.air_target_rate_n_mm,
+        "required_pressure_psi_for_target_rate": req_pressure_psi,
+        "reference": {
+            "pressure_psi": inp.air_reference_pressure_psi,
+            "target_rate_n_mm": inp.air_reference_equivalent_rate_n_mm,
+            "target_preload_mm": inp.air_reference_preload_mm,
+            "model_rate_at_reference_n_mm": k_ref_n_mm,
+            "model_preload_at_reference_mm": preload_ref_model_mm,
+            "calibration_factor": calibration_factor,
+        },
+        "spring_force_at_sag_n": f_sag,
+    }
+
+
 def parse_dyno_csv(csv_text: str) -> dict:
     fh = io.StringIO(csv_text.strip())
     sample = fh.read(1024)
@@ -1055,6 +1153,7 @@ def simulate(inp: SimulationInput) -> JSONResponse:
 
     comp_03 = min(compression, key=lambda x: abs(x["velocity_m_s"] - 0.3))
     chassis = chassis_measurement(inp)
+    air_fork = air_fork_reverse_engineering(inp)
     comp_rec, comp_note = recommended_stack(inp.compression_stack, "compression", ratios["compression_zeta"])
     reb_rec, reb_note = recommended_stack(inp.rebound_stack, "rebound", ratios["rebound_zeta"])
     result = {
@@ -1075,6 +1174,7 @@ def simulate(inp: SimulationInput) -> JSONResponse:
             **ratios,
         },
         "chassis": chassis,
+        "air_fork_reverse_engineering": air_fork,
         "stacks": {
             "input": {
                 "compression": stack_to_rows(inp.compression_stack),
