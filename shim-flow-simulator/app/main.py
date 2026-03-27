@@ -66,6 +66,8 @@ class SimulationInput(BaseModel):
     mid_port_diameter_mm: float = Field(4.8, gt=0)
 
     bleed_diameter_mm: float = Field(0.9, gt=0)
+    piston_bleed_hole_count: int = Field(0, ge=0, le=20)
+    piston_bleed_hole_diameter_mm: float = Field(0.8, ge=0)
     rebound_orifice_diameter_mm: float = Field(1.2, gt=0)
     low_speed_clicks_out: int = Field(12, ge=0, le=30)
     rebound_clicks_out: int = Field(12, ge=0, le=30)
@@ -78,6 +80,9 @@ class SimulationInput(BaseModel):
     clamp_diameter_mm: float = Field(8.0, gt=0.1)
     include_base_valve: bool = True
     include_mid_valve: bool = True
+    mid_valve_float_mm: float = Field(0.10, ge=0, le=1.5)
+    trampoline_preload_mm: float = Field(0.0, ge=0, le=2.0)
+    trampoline_spring_rate_n_per_mm: float = Field(20.0, ge=0, le=200.0)
 
     oil_density_kg_m3: float = Field(850.0, gt=100)
     oil_viscosity_cst: float = Field(16.0, gt=1)
@@ -183,6 +188,7 @@ class ValveStage(BaseModel):
     stack: list[Shim]
     area_multiplier: float = 1.0
     hs_multiplier: float = 1.0
+    applies_direction: Literal["compression", "rebound", "both"] = "both"
 
 
 def mm_to_m(v: float) -> float:
@@ -207,6 +213,12 @@ def round_port_area_m2(count: int, diameter_mm: float) -> float:
 
 def single_orifice_area_m2(diameter_mm: float) -> float:
     return pi * (mm_to_m(diameter_mm) ** 2) / 4.0
+
+
+def multi_orifice_area_m2(count: int, diameter_mm: float) -> float:
+    if count <= 0 or diameter_mm <= 0:
+        return 0.0
+    return count * single_orifice_area_m2(diameter_mm)
 
 
 def resolved_machine_type(inp: SimulationInput) -> str:
@@ -314,6 +326,7 @@ def build_stages(inp: SimulationInput, direction: str) -> list[ValveStage]:
             stack=inp.compression_stack if direction == "compression" else inp.rebound_stack,
             area_multiplier=1.0,
             hs_multiplier=1.0,
+            applies_direction="both",
         )
     ]
     if inp.include_base_valve:
@@ -325,6 +338,7 @@ def build_stages(inp: SimulationInput, direction: str) -> list[ValveStage]:
                 stack=inp.base_valve_stack,
                 area_multiplier=0.95,
                 hs_multiplier=1.08,
+                applies_direction="both",
             )
         )
     if inp.include_mid_valve:
@@ -336,6 +350,7 @@ def build_stages(inp: SimulationInput, direction: str) -> list[ValveStage]:
                 stack=inp.mid_valve_stack,
                 area_multiplier=0.90,
                 hs_multiplier=1.15,
+                applies_direction="compression",
             )
         )
 
@@ -348,10 +363,33 @@ def build_stages(inp: SimulationInput, direction: str) -> list[ValveStage]:
     return stages
 
 
-def stage_dynamic_area_m2(inp: SimulationInput, stage: ValveStage, delta_p_pa: float) -> tuple[float, float]:
+def stage_dynamic_area_m2(
+    inp: SimulationInput, stage: ValveStage, delta_p_pa: float, direction: str
+) -> tuple[float, float, dict]:
     raw_port_area = round_port_area_m2(stage.port_count, stage.port_diameter_mm) * stage.area_multiplier
+    if stage.applies_direction not in ("both", direction):
+        return raw_port_area, 0.0, {
+            "float_area_m2": 0.0,
+            "trampoline_threshold_pa": 0.0,
+            "effective_dp_pa": delta_p_pa,
+        }
+
+    float_area = 0.0
+    trampoline_threshold_pa = 0.0
+    effective_dp = delta_p_pa
+    if (
+        stage.name == "mid"
+        and direction == "compression"
+        and resolved_machine_type(inp) == "fork"
+    ):
+        float_lift_m = mm_to_m(inp.mid_valve_float_mm)
+        float_area = shim_curtain_area_m2(stage.port_count, stage.port_diameter_mm, float_lift_m)
+        preload_n = inp.trampoline_preload_mm * inp.trampoline_spring_rate_n_per_mm
+        trampoline_threshold_pa = preload_n / max(raw_port_area, 1e-9)
+        effective_dp = max(delta_p_pa - trampoline_threshold_pa, 0.0)
+
     lift = shim_lift_m(
-        delta_p_pa,
+        effective_dp,
         stage.stack,
         raw_port_area,
         inp.high_speed_turns_out,
@@ -359,12 +397,16 @@ def stage_dynamic_area_m2(inp: SimulationInput, stage: ValveStage, delta_p_pa: f
         stage.hs_multiplier,
     )
     curtain = shim_curtain_area_m2(stage.port_count, stage.port_diameter_mm, lift)
-    effective_area = min(raw_port_area, raw_port_area * 0.07 + curtain)
-    return max(effective_area, 1e-12), lift
+    effective_area = min(raw_port_area, raw_port_area * 0.07 + float_area + curtain)
+    return max(effective_area, 1e-12), lift, {
+        "float_area_m2": float_area,
+        "trampoline_threshold_pa": trampoline_threshold_pa,
+        "effective_dp_pa": effective_dp,
+    }
 
 
 def solve_series_flow_for_dp(
-    inp: SimulationInput, stages: list[ValveStage], target_dp_pa: float, cd: float, rho: float
+    inp: SimulationInput, stages: list[ValveStage], target_dp_pa: float, cd: float, rho: float, direction: str
 ) -> tuple[float, list[dict]]:
     def series_dp_for_q(q_guess: float) -> tuple[float, list[dict]]:
         total_dp = 0.0
@@ -374,8 +416,9 @@ def solve_series_flow_for_dp(
             dp_stage = initial_stage_dp
             area = 1e-12
             lift = 0.0
+            extras = {"float_area_m2": 0.0, "trampoline_threshold_pa": 0.0, "effective_dp_pa": dp_stage}
             for _ in range(8):
-                area, lift = stage_dynamic_area_m2(inp, stage, dp_stage)
+                area, lift, extras = stage_dynamic_area_m2(inp, stage, dp_stage, direction)
                 dp_next = orifice_delta_p_pa(q_guess, area, cd, rho)
                 if abs(dp_next - dp_stage) <= max(dp_next, 1.0) * 1e-3:
                     dp_stage = dp_next
@@ -387,6 +430,9 @@ def solve_series_flow_for_dp(
                 "area_m2": area,
                 "lift_m": lift,
                 "dp_pa": dp_stage,
+                "float_area_m2": extras["float_area_m2"],
+                "trampoline_threshold_pa": extras["trampoline_threshold_pa"],
+                "effective_dp_pa": extras["effective_dp_pa"],
             })
         return total_dp, stage_data
 
@@ -425,7 +471,8 @@ def solve_velocity_point(inp: SimulationInput, v_m_s: float, direction: str) -> 
 
     bleed_area = single_orifice_area_m2(inp.bleed_diameter_mm) * click_factor(inp.low_speed_clicks_out)
     rebound_area = single_orifice_area_m2(inp.rebound_orifice_diameter_mm) * click_factor(inp.rebound_clicks_out)
-    bypass_base_area = bleed_area if direction == "compression" else rebound_area
+    piston_bleed_area = multi_orifice_area_m2(inp.piston_bleed_hole_count, inp.piston_bleed_hole_diameter_mm)
+    bypass_base_area = (bleed_area if direction == "compression" else rebound_area) + piston_bleed_area
 
     lo_dp, hi_dp = 500.0, 3.0e7
     converged_stage_data: list[dict] = []
@@ -439,7 +486,7 @@ def solve_velocity_point(inp: SimulationInput, v_m_s: float, direction: str) -> 
         hsc_area = hsc_poppet_area_m2(inp, dp, direction)
         bypass_area = bypass_base_area + hsc_area
         q_bypass = flow_from_delta_p_pa(dp, bypass_area, cd, rho)
-        q_shim, stage_data = solve_series_flow_for_dp(inp, stages, dp, cd, rho)
+        q_shim, stage_data = solve_series_flow_for_dp(inp, stages, dp, cd, rho, direction)
         q_total = q_bypass + q_shim
 
         converged_stage_data = stage_data
@@ -455,10 +502,16 @@ def solve_velocity_point(inp: SimulationInput, v_m_s: float, direction: str) -> 
             break
 
     main_lift_mm = 0.0
+    mid_float_area_mm2 = 0.0
+    mid_trampoline_threshold_bar = 0.0
+    mid_effective_dp_bar = 0.0
     for stage in converged_stage_data:
         if stage["name"] == "piston":
             main_lift_mm = stage["lift_m"] * 1000.0
-            break
+        if stage["name"] == "mid":
+            mid_float_area_mm2 = stage["float_area_m2"] * 1e6
+            mid_trampoline_threshold_bar = stage["trampoline_threshold_pa"] / 1e5
+            mid_effective_dp_bar = stage["effective_dp_pa"] / 1e5
 
     total_flow = max(converged_q_shim + converged_q_bypass, 1e-12)
     machine = resolved_machine_type(inp)
@@ -483,6 +536,10 @@ def solve_velocity_point(inp: SimulationInput, v_m_s: float, direction: str) -> 
         "effective_main_area_mm2": converged_stage_data[0]["area_m2"] * 1e6 if converged_stage_data else 0.0,
         "fixed_bypass_area_mm2": bypass_base_area * 1e6,
         "hsc_area_mm2": (converged_bypass_area - bypass_base_area) * 1e6,
+        "piston_bleed_area_mm2": piston_bleed_area * 1e6,
+        "mid_float_area_mm2": mid_float_area_mm2,
+        "mid_trampoline_threshold_bar": mid_trampoline_threshold_bar,
+        "mid_effective_dp_bar": mid_effective_dp_bar,
         "port_total_area_mm2": round_port_area_m2(inp.port_count, inp.port_diameter_mm) * 1e6,
         "stage_pressures_pa": {s["name"]: s["dp_pa"] for s in converged_stage_data},
         "reservoir_pressure_bar_abs": reservoir_abs_bar,
@@ -1166,7 +1223,13 @@ def simulate(inp: SimulationInput) -> JSONResponse:
             "base_port_area_mm2": round_port_area_m2(inp.base_port_count, inp.base_port_diameter_mm) * 1e6,
             "mid_port_area_mm2": round_port_area_m2(inp.mid_port_count, inp.mid_port_diameter_mm) * 1e6,
             "bleed_area_mm2": single_orifice_area_m2(inp.bleed_diameter_mm) * 1e6,
+            "piston_bleed_area_mm2": multi_orifice_area_m2(inp.piston_bleed_hole_count, inp.piston_bleed_hole_diameter_mm) * 1e6,
             "rebound_orifice_area_mm2": single_orifice_area_m2(inp.rebound_orifice_diameter_mm) * 1e6,
+            "mid_valve_float_mm": inp.mid_valve_float_mm,
+            "trampoline_preload_mm": inp.trampoline_preload_mm,
+            "trampoline_spring_rate_n_per_mm": inp.trampoline_spring_rate_n_per_mm,
+            "mid_float_area_mm2_at_03": comp_03["mid_float_area_mm2"],
+            "mid_trampoline_threshold_bar_at_03": comp_03["mid_trampoline_threshold_bar"],
             "temperature_corrected_cd": temperature_corrected_cd(inp),
             "initial_gas_pressure_bar": inp.initial_gas_pressure_bar,
             "reservoir_pressure_bar_abs_at_probe": comp_03["reservoir_pressure_bar_abs"],
