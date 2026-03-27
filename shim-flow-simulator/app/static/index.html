@@ -50,6 +50,8 @@
     .lock-overlay .inner .title{font-size:16px;font-weight:700}
     .lock-overlay .inner .desc{font-size:13px;color:#d3e3ff;margin-top:6px;line-height:1.45}
     .lockable.locked .lock-overlay{display:flex}
+    body.tour-readable .lockable.locked .lockable-content{filter:none;opacity:1;pointer-events:auto;user-select:auto}
+    body.tour-readable .lockable.locked .lock-overlay{display:none}
     .viz{padding:0;overflow:hidden}
     .viz-top{display:flex;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
     .viz-wrap{padding:16px}
@@ -527,7 +529,6 @@
     const INTRO_STORAGE_KEY = 'shimstackor_intro_seen_v1';
     const INTRO_CHOICE_STORAGE_KEY = 'shimstackor_intro_choice_seen_v1';
     const TEASER_LOOP_MS = 20000;
-    const INTRO_STEP_MS = { quick: 5400, detailed: 7600 };
     const teaserScenes = [
       { at: 0.00, text: 'Scene 1/5: hydraulic flow demand builds through piston and bypass paths.' },
       { at: 0.20, text: 'Scene 2/5: shim lift increases with pressure, changing effective flow area.' },
@@ -622,10 +623,6 @@
 
     function currentIntroSteps(){
       return introTours[introState.mode] || introTours.quick;
-    }
-
-    function currentIntroStepMs(){
-      return INTRO_STEP_MS[introState.mode] || INTRO_STEP_MS.quick;
     }
 
     function teaserSceneAt(progress01){
@@ -803,28 +800,11 @@
       highlight.style.height = `${height}px`;
     }
 
-    function scheduleIntroAutoplay(){
+    function updateIntroProgress(){
       const steps = currentIntroSteps();
-      const stepMs = currentIntroStepMs();
-      clearIntroAutoplayTimers();
-      introState.startedAt = Date.now();
       const fill = document.getElementById('introProgressFill');
-      fill.style.width = '0%';
-      introState.progressTimer = window.setInterval(() => {
-        if (!introState.running) return;
-        const elapsed = Date.now() - introState.startedAt;
-        const pct = Math.min(100, (elapsed / stepMs) * 100);
-        fill.style.width = `${pct}%`;
-      }, 80);
-      introState.autoTimer = window.setTimeout(() => {
-        if (!introState.running) return;
-        if (introState.stepIndex >= steps.length - 1){
-          endIntroTour(true);
-          return;
-        }
-        introState.stepIndex += 1;
-        renderIntroStep();
-      }, stepMs);
+      const pct = steps.length ? ((introState.stepIndex + 1) / steps.length) * 100 : 0;
+      fill.style.width = `${pct.toFixed(1)}%`;
     }
 
     function renderIntroStep(){
@@ -839,7 +819,7 @@
       const target = document.querySelector(step.target);
       if (target) target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
       window.setTimeout(() => setIntroHighlight(step.target), 240);
-      scheduleIntroAutoplay();
+      updateIntroProgress();
     }
 
     function endIntroTour(markAsSeen = true){
@@ -850,6 +830,7 @@
       overlay.classList.remove('active');
       overlay.setAttribute('aria-hidden', 'true');
       document.getElementById('introHighlight').style.display = 'none';
+      document.body.classList.remove('tour-readable');
       if (markAsSeen){
         localStorage.setItem(INTRO_STORAGE_KEY, '1');
       }
@@ -866,6 +847,7 @@
       const overlay = document.getElementById('introOverlay');
       overlay.classList.add('active');
       overlay.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('tour-readable');
       startIntroDemoAnimation();
       renderIntroStep();
     }
