@@ -76,6 +76,7 @@
       border:1px solid rgba(255,255,255,.22);font-size:12px;font-weight:600;color:#dce9ff
     }
     .ghost-btn:hover{background:rgba(88,166,255,.15)}
+    .tour-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
     .intro-overlay{
       position:fixed;inset:0;z-index:12000;display:none;align-items:flex-end;justify-content:center;
       padding:24px;background:linear-gradient(180deg,rgba(5,9,18,.35),rgba(5,9,18,.8));
@@ -116,7 +117,10 @@
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
         <div class="tag">Fork + Shock Professional Suite</div>
-        <button id="replayIntroBtn" class="ghost-btn" type="button">Replay quick tour</button>
+        <div class="tour-btns">
+          <button id="replayIntroBtn" class="ghost-btn" type="button">Replay quick tour</button>
+          <button id="replayIntroDeepBtn" class="ghost-btn" type="button">Replay in-depth tour</button>
+        </div>
       </div>
     </div>
 
@@ -396,42 +400,95 @@
       pendingOrderId: '',
     };
     const INTRO_STORAGE_KEY = 'shimstackor_intro_seen_v1';
-    const INTRO_STEP_MS = 5400;
-    const introSteps = [
-      {
-        target: '#inputsCard',
-        title: 'Enter all suspension setup details',
-        text: 'Input geometry, ports, clickers, spring, oil, air-chamber and chassis dimensions. You can use Load demo for an instant baseline.'
-      },
-      {
-        target: '#paywallCard',
-        title: 'Customer enters details before payment',
-        text: 'The full setup can be entered first. PayPal unlocks calculated shim stacks and full engineering output for this analysis.'
-      },
-      {
-        target: '#vizLockable',
-        title: 'Live damper cutaway animation',
-        text: 'The center view animates piston position, shim lift, pressure response, and flow-path split using the simulation state.'
-      },
-      {
-        target: '#summaryLockable',
-        title: 'Engineering summary and stack detail',
-        text: 'Review zeta, cavitation margin, flow split, chassis indicators, AER outputs, and input vs recommended shim stacks.'
-      },
-      {
-        target: '#chartsLockable',
-        title: 'Force, pressure, lift, and spring curves',
-        text: 'Charts show the detail behind each recommendation and make it easy to explain decisions to customers and teams.'
-      }
-    ];
+    const INTRO_STEP_MS = { quick: 5400, detailed: 7600 };
+    const introTours = {
+      quick: [
+        {
+          target: '#inputsCard',
+          title: 'Enter all suspension setup details',
+          text: 'Input geometry, ports, clickers, spring, oil, air-chamber and chassis dimensions. You can use Load demo for an instant baseline.'
+        },
+        {
+          target: '#paywallCard',
+          title: 'Customer enters details before payment',
+          text: 'The full setup can be entered first. PayPal unlocks calculated shim stacks and full engineering output for this analysis.'
+        },
+        {
+          target: '#vizLockable',
+          title: 'Live damper cutaway animation',
+          text: 'The center view animates piston position, shim lift, pressure response, and flow-path split using the simulation state.'
+        },
+        {
+          target: '#summaryLockable',
+          title: 'Engineering summary and stack detail',
+          text: 'Review zeta, cavitation margin, flow split, chassis indicators, AER outputs, and input vs recommended shim stacks.'
+        },
+        {
+          target: '#chartsLockable',
+          title: 'Force, pressure, lift, and spring curves',
+          text: 'Charts show the detail behind each recommendation and make it easy to explain decisions to customers and teams.'
+        }
+      ],
+      detailed: [
+        {
+          target: '.pitch',
+          title: 'What this platform is built for',
+          text: 'Shim Calculator Engineering combines flow simulation, shim mechanics, and chassis-aware indicators so recommendations are explainable, not just guessed.'
+        },
+        {
+          target: '#inputsCard',
+          title: 'Geometry and architecture inputs',
+          text: 'Set fork/shock architecture, piston and shaft dimensions, port counts and diameters, and valve routing assumptions before running calculations.'
+        },
+        {
+          target: '#compression_stack',
+          title: 'Stack definition and valve intent',
+          text: 'Enter compression/rebound plus base and mid-valve stacks. This defines the opening behavior used to solve pressure-flow equilibrium.'
+        },
+        {
+          target: '#paywallCard',
+          title: 'Commercial flow for customer jobs',
+          text: 'Customers can complete all setup data first. Payment then unlocks generated stacks, simulation outputs, and engineering detail for that analysis.'
+        },
+        {
+          target: '#vizLockable',
+          title: 'Live cutaway animation and metrics',
+          text: 'Watch piston position, shim lift and flow-path weighting animate from solved values, while quick metrics report zeta, port area and cavitation margin.'
+        },
+        {
+          target: '#summaryLockable',
+          title: 'Engineering interpretation panel',
+          text: 'Read force at target velocity, flow split, reservoir pressure probe, chassis flags, and WP AER reverse-engineered equivalent spring outcomes.'
+        },
+        {
+          target: '#loadDynoBtn',
+          title: 'Dyno CSV overlay workflow',
+          text: 'Load dyno traces to compare measured data against model output and identify where low/mid/high-speed behavior deviates from the target.'
+        },
+        {
+          target: '#chartsLockable',
+          title: 'Decision-ready visualization',
+          text: 'Force, pressure, shim-lift and spring progression charts make it easier to justify stack changes with a transparent technical story.'
+        }
+      ]
+    };
     const introState = {
       running: false,
+      mode: 'quick',
       stepIndex: 0,
       autoTimer: null,
       progressTimer: null,
       demoTimer: null,
       startedAt: 0,
     };
+
+    function currentIntroSteps(){
+      return introTours[introState.mode] || introTours.quick;
+    }
+
+    function currentIntroStepMs(){
+      return INTRO_STEP_MS[introState.mode] || INTRO_STEP_MS.quick;
+    }
 
     function setPaymentStatus(message, kind=''){
       const el = document.getElementById('paymentStatus');
@@ -533,6 +590,8 @@
     }
 
     function scheduleIntroAutoplay(){
+      const steps = currentIntroSteps();
+      const stepMs = currentIntroStepMs();
       clearIntroAutoplayTimers();
       introState.startedAt = Date.now();
       const fill = document.getElementById('introProgressFill');
@@ -540,27 +599,29 @@
       introState.progressTimer = window.setInterval(() => {
         if (!introState.running) return;
         const elapsed = Date.now() - introState.startedAt;
-        const pct = Math.min(100, (elapsed / INTRO_STEP_MS) * 100);
+        const pct = Math.min(100, (elapsed / stepMs) * 100);
         fill.style.width = `${pct}%`;
       }, 80);
       introState.autoTimer = window.setTimeout(() => {
         if (!introState.running) return;
-        if (introState.stepIndex >= introSteps.length - 1){
+        if (introState.stepIndex >= steps.length - 1){
           endIntroTour(true);
           return;
         }
         introState.stepIndex += 1;
         renderIntroStep();
-      }, INTRO_STEP_MS);
+      }, stepMs);
     }
 
     function renderIntroStep(){
-      const step = introSteps[introState.stepIndex];
+      const steps = currentIntroSteps();
+      const step = steps[introState.stepIndex];
       document.getElementById('introTitle').textContent = step.title;
       document.getElementById('introText').textContent = step.text;
-      document.getElementById('introStepMeta').textContent = `Step ${introState.stepIndex + 1} of ${introSteps.length}`;
-      document.getElementById('introNextBtn').style.display = introState.stepIndex < introSteps.length - 1 ? 'inline-flex' : 'none';
-      document.getElementById('introDoneBtn').style.display = introState.stepIndex >= introSteps.length - 1 ? 'inline-flex' : 'none';
+      const modeLabel = introState.mode === 'detailed' ? 'In-depth tour' : 'Quick tour';
+      document.getElementById('introStepMeta').textContent = `${modeLabel} - Step ${introState.stepIndex + 1} of ${steps.length}`;
+      document.getElementById('introNextBtn').style.display = introState.stepIndex < steps.length - 1 ? 'inline-flex' : 'none';
+      document.getElementById('introDoneBtn').style.display = introState.stepIndex >= steps.length - 1 ? 'inline-flex' : 'none';
       const target = document.querySelector(step.target);
       if (target) target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
       window.setTimeout(() => setIntroHighlight(step.target), 240);
@@ -580,8 +641,9 @@
       }
     }
 
-    function startIntroTour(force = false){
+    function startIntroTour(mode = 'quick', force = false){
       if (introState.running) return;
+      introState.mode = mode in introTours ? mode : 'quick';
       if (!force && localStorage.getItem(INTRO_STORAGE_KEY) === '1') return;
       introState.running = true;
       introState.stepIndex = 0;
@@ -930,23 +992,28 @@
       if (paymentState.paid || paymentState.bypass) setLocked(false);
       else resetLockedOutputs();
       loadDemo();
-      window.setTimeout(() => startIntroTour(false), 500);
+      window.setTimeout(() => startIntroTour('quick', false), 500);
     }
 
     document.getElementById('introSkipBtn').addEventListener('click', () => endIntroTour(true));
     document.getElementById('introNextBtn').addEventListener('click', () => {
-      if (!introState.running || introState.stepIndex >= introSteps.length - 1) return;
+      const steps = currentIntroSteps();
+      if (!introState.running || introState.stepIndex >= steps.length - 1) return;
       introState.stepIndex += 1;
       renderIntroStep();
     });
     document.getElementById('introDoneBtn').addEventListener('click', () => endIntroTour(true));
     document.getElementById('replayIntroBtn').addEventListener('click', () => {
       endIntroTour(false);
-      startIntroTour(true);
+      startIntroTour('quick', true);
+    });
+    document.getElementById('replayIntroDeepBtn').addEventListener('click', () => {
+      endIntroTour(false);
+      startIntroTour('detailed', true);
     });
     window.addEventListener('resize', () => {
       if (!introState.running) return;
-      setIntroHighlight(introSteps[introState.stepIndex].target);
+      setIntroHighlight(currentIntroSteps()[introState.stepIndex].target);
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && introState.running){
