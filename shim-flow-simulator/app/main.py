@@ -7,6 +7,7 @@ import os
 import secrets
 import time
 from base64 import b64encode
+from pathlib import Path
 from math import exp, pi, sqrt
 from threading import Lock
 from typing import Literal
@@ -21,8 +22,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+INDEX_FILE = STATIC_DIR / "index.html"
+
 app = FastAPI(title="Shim Calculator Engineering MVP")
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 STEEL_E = 210e9
@@ -933,7 +938,7 @@ def recommended_stack(stack: list[Shim], direction: str, zeta: float) -> tuple[l
 
 @app.get("/")
 def root() -> FileResponse:
-    return FileResponse("app/static/index.html")
+    return FileResponse(str(INDEX_FILE))
 
 
 @app.get("/api/public-config")
