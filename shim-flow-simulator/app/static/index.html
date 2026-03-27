@@ -90,6 +90,13 @@
     .preset-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
     .preset-row select{padding:9px}
     .preset-row button{width:auto;white-space:nowrap;padding:9px 12px}
+    .preset-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+    .preset-actions button{padding:9px 12px}
+    .ab-compare-tag{
+      margin-top:8px;font-size:12px;color:#cfe0ff;background:rgba(88,166,255,.14);
+      border:1px solid rgba(88,166,255,.26);border-radius:9px;padding:8px 10px;display:none
+    }
+    .ab-compare-tag.show{display:block}
     .intro-overlay{
       position:fixed;inset:0;z-index:12000;display:none;align-items:flex-end;justify-content:center;
       padding:24px;background:linear-gradient(180deg,rgba(5,9,18,.35),rgba(5,9,18,.8));
@@ -225,9 +232,17 @@
             <select id="presetSelect">
               <option value="none">Select preset...</option>
               <option value="kyb_sss_cartridge">KYB SSS cartridge baseline</option>
+              <option value="kyb_sss_mx_fork">KYB SSS MX fork (firmer race)</option>
+              <option value="kyb_sss_enduro_fork_crossover">KYB SSS Enduro fork (crossover)</option>
+              <option value="kyb_enduro_shock_crossover">KYB Enduro shock (crossover)</option>
             </select>
             <button id="applyPresetBtn" type="button">Apply preset</button>
           </div>
+          <div class="preset-actions">
+            <button id="captureAbBtn" type="button">Capture A baseline</button>
+            <button id="clearAbBtn" type="button">Clear A/B compare</button>
+          </div>
+          <div id="abCompareTag" class="ab-compare-tag">A/B compare inactive</div>
         </div>
         <div class="form-grid">
           <div class="mode-raw-selector"><label>Machine</label><select id="mode"><option value="fork">Fork</option><option value="shock">Shock</option></select></div>
@@ -492,6 +507,14 @@
 
   <script>
     let dynoOverlay = {compression: [], rebound: []};
+    let latestSimulationData = null;
+    let abBaseline = null;
+    const PRESET_LABELS = {
+      kyb_sss_cartridge: 'KYB SSS cartridge baseline',
+      kyb_sss_mx_fork: 'KYB SSS MX fork (firmer race)',
+      kyb_sss_enduro_fork_crossover: 'KYB SSS Enduro fork (crossover)',
+      kyb_enduro_shock_crossover: 'KYB Enduro shock (crossover)',
+    };
     const paymentState = {
       enabled: false,
       bypass: false,
@@ -987,6 +1010,46 @@
 
     function nearestByAbs(arr, fn){ return arr.reduce((a,b)=>Math.abs(fn(b)) < Math.abs(fn(a)) ? b : a); }
 
+    function updateAbCompareTag(currentData = null){
+      const el = document.getElementById('abCompareTag');
+      if (!abBaseline || !abBaseline.data){
+        el.textContent = 'A/B compare inactive';
+        el.classList.remove('show');
+        return;
+      }
+      let txt = `A/B compare active - A baseline: ${abBaseline.label}`;
+      const bData = currentData || latestSimulationData;
+      if (bData?.compression?.length && bData?.rebound?.length && abBaseline.data?.compression?.length && abBaseline.data?.rebound?.length){
+        const aComp = nearestByAbs(abBaseline.data.compression, p=>p.velocity_m_s - 0.3).force_n;
+        const bComp = nearestByAbs(bData.compression, p=>p.velocity_m_s - 0.3).force_n;
+        const aReb = nearestByAbs(abBaseline.data.rebound, p=>Math.abs(p.velocity_m_s) - 0.3).force_n;
+        const bReb = nearestByAbs(bData.rebound, p=>Math.abs(p.velocity_m_s) - 0.3).force_n;
+        txt += ` | ΔComp@0.3 ${(bComp - aComp).toFixed(0)} N | ΔReb@0.3 ${(Math.abs(bReb) - Math.abs(aReb)).toFixed(0)} N`;
+      }
+      el.textContent = txt;
+      el.classList.add('show');
+    }
+
+    function clearAbBaseline(){
+      abBaseline = null;
+      updateAbCompareTag(latestSimulationData);
+    }
+
+    function captureBaselineForAb(){
+      if (!latestSimulationData){
+        alert('Run a simulation first, then capture A baseline.');
+        return;
+      }
+      const preset = document.getElementById('presetSelect').value;
+      const mode = document.getElementById('mode').value;
+      const label = PRESET_LABELS[preset] || (mode === 'shock' ? 'Custom shock setup' : 'Custom fork setup');
+      abBaseline = {
+        label,
+        data: JSON.parse(JSON.stringify(latestSimulationData)),
+      };
+      updateAbCompareTag(latestSimulationData);
+    }
+
     function updateAnimation(point){
       const piston = document.getElementById('piston');
       const shaft = document.getElementById('shaft');
@@ -1020,10 +1083,58 @@
       const c = data.compression;
       const r = data.rebound;
       const s = data.spring;
-      const forceTraces = [
+      const forceTraces = [];
+
+      if (abBaseline?.data){
+        const ac = abBaseline.data.compression || [];
+        const ar = abBaseline.data.rebound || [];
+        const as = abBaseline.data.spring || [];
+        forceTraces.push(
+          {x:ar.map(p=>p.velocity_m_s), y:ar.map(p=>p.force_n), mode:'lines', name:`A baseline rebound (${abBaseline.label})`, line:{dash:'dot', color:'#ffd166'}},
+          {x:ac.map(p=>p.velocity_m_s), y:ac.map(p=>p.force_n), mode:'lines', name:`A baseline compression (${abBaseline.label})`, line:{dash:'dot', color:'#ffe29a'}}
+        );
+        Plotly.newPlot('pressureChart', [
+          {x:ac.map(p=>p.velocity_m_s), y:ac.map(p=>p.pressure_pa/1e5), mode:'lines', name:'A baseline comp', line:{dash:'dot', color:'#ffd166'}},
+          {x:ar.map(p=>Math.abs(p.velocity_m_s)), y:ar.map(p=>p.pressure_pa/1e5), mode:'lines', name:'A baseline reb', line:{dash:'dot', color:'#ffe29a'}},
+          {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Compression'},
+          {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Rebound'}
+        ], baseLayout('Valve pressure drop', '|Velocity| (m/s)', 'DeltaP (bar)'));
+
+        Plotly.newPlot('liftChart', [
+          {x:ac.map(p=>p.velocity_m_s), y:ac.map(p=>p.shim_lift_mm), mode:'lines', name:'A baseline comp lift', line:{dash:'dot', color:'#ffd166'}},
+          {x:ar.map(p=>Math.abs(p.velocity_m_s)), y:ar.map(p=>p.shim_lift_mm), mode:'lines', name:'A baseline reb lift', line:{dash:'dot', color:'#ffe29a'}},
+          {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston comp lift'},
+          {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston reb lift'}
+        ], baseLayout('Shim lift vs velocity', '|Velocity| (m/s)', 'Lift (mm)'));
+
+        Plotly.newPlot('springChart', [
+          {x:as.map(p=>p.travel_mm), y:as.map(p=>p.combined_force_n), mode:'lines', name:`A baseline combined (${abBaseline.label})`, line:{dash:'dot', color:'#ffd166'}},
+          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.spring_force_n), mode:'lines', name:'Mechanical spring'},
+          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.air_force_n), mode:'lines', name:'Air/gas force'},
+          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.combined_force_n), mode:'lines', name:'Combined'}
+        ], baseLayout('Spring and chamber progression', 'Travel (mm)', 'Force (N)'));
+      } else {
+        Plotly.newPlot('pressureChart', [
+          {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Compression'},
+          {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Rebound'}
+        ], baseLayout('Valve pressure drop', '|Velocity| (m/s)', 'DeltaP (bar)'));
+
+        Plotly.newPlot('liftChart', [
+          {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston comp lift'},
+          {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston reb lift'}
+        ], baseLayout('Shim lift vs velocity', '|Velocity| (m/s)', 'Lift (mm)'));
+
+        Plotly.newPlot('springChart', [
+          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.spring_force_n), mode:'lines', name:'Mechanical spring'},
+          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.air_force_n), mode:'lines', name:'Air/gas force'},
+          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.combined_force_n), mode:'lines', name:'Combined'}
+        ], baseLayout('Spring and chamber progression', 'Travel (mm)', 'Force (N)'));
+      }
+
+      forceTraces.push(
         {x:r.map(p=>p.velocity_m_s), y:r.map(p=>p.force_n), mode:'lines', name:'Model rebound'},
         {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.force_n), mode:'lines', name:'Model compression'}
-      ];
+      );
       if (dynoOverlay.compression.length){
         forceTraces.push({x:dynoOverlay.compression.map(p=>p.velocity_m_s), y:dynoOverlay.compression.map(p=>p.force_n), mode:'markers', marker:{size:6}, name:'Dyno compression'});
       }
@@ -1031,19 +1142,6 @@
         forceTraces.push({x:dynoOverlay.rebound.map(p=>p.velocity_m_s), y:dynoOverlay.rebound.map(p=>p.force_n), mode:'markers', marker:{size:6}, name:'Dyno rebound'});
       }
       Plotly.newPlot('forceChart', forceTraces, baseLayout('Force vs shaft velocity', 'Velocity (m/s)', 'Force (N)'));
-      Plotly.newPlot('pressureChart', [
-        {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Compression'},
-        {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Rebound'}
-      ], baseLayout('Valve pressure drop', '|Velocity| (m/s)', 'DeltaP (bar)'));
-      Plotly.newPlot('liftChart', [
-        {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston comp lift'},
-        {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston reb lift'}
-      ], baseLayout('Shim lift vs velocity', '|Velocity| (m/s)', 'Lift (mm)'));
-      Plotly.newPlot('springChart', [
-        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.spring_force_n), mode:'lines', name:'Mechanical spring'},
-        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.air_force_n), mode:'lines', name:'Air/gas force'},
-        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.combined_force_n), mode:'lines', name:'Combined'}
-      ], baseLayout('Spring and chamber progression', 'Travel (mm)', 'Force (N)'));
     }
 
     function updateSummary(data){
@@ -1118,9 +1216,11 @@
           throw new Error(data.error || 'Simulation failed');
         }
         setLocked(false);
+        latestSimulationData = data;
         renderCharts(data);
         updateSummary(data);
         updateStackTables(data.stacks);
+        updateAbCompareTag(data);
       }catch(err){
         alert(String(err.message || err));
         console.error(err);
@@ -1211,53 +1311,96 @@
     }
 
     function applyPreset(name){
-      if (name === 'kyb_sss_cartridge'){
-        setFormValues({
-          mode: 'fork',
-          fork_platform: 'coil',
-          shock_architecture: 'monotube',
-          piston_diameter_mm: '24.0',
-          shaft_diameter_mm: '12.0',
-          port_count: '4',
-          port_diameter_mm: '6.1',
-          base_port_count: '4',
-          base_port_diameter_mm: '5.8',
-          mid_port_count: '3',
-          mid_port_diameter_mm: '4.8',
-          bleed_diameter_mm: '0.90',
-          piston_bleed_hole_count: '2',
-          piston_bleed_hole_diameter_mm: '0.80',
-          rebound_orifice_diameter_mm: '1.20',
-          low_speed_clicks_out: '12',
-          rebound_clicks_out: '12',
-          high_speed_turns_out: '1.5',
-          hsc_poppet_diameter_mm: '6.0',
-          hsc_spring_rate_n_per_mm: '18.0',
-          hsc_preload_mm: '1.0',
-          hsc_max_lift_mm: '1.0',
-          mid_valve_float_mm: '0.12',
-          trampoline_preload_mm: '0.06',
-          trampoline_spring_rate_n_per_mm: '20.0',
-          spring_rate_n_per_mm: '4.8',
-          preload_mm: '5.0',
-          travel_mm: '310',
-          motion_ratio: '1.0',
-          oil_height_mm: '105',
-          tube_inner_diameter_mm: '48',
-          fork_positive_air_bar_abs: '8.8',
-          fork_negative_air_bar_abs: '6.4',
-          fork_secondary_volume_cc: '55',
-          compression_stack: '24,0.15,8\n22,0.15,2\n20,0.10,1',
-          rebound_stack: '22,0.15,6\n20,0.15,2\n18,0.10,1',
-          base_valve_stack: '22,0.15,4\n20,0.15,2',
-          mid_valve_stack: '20,0.10,3\n18,0.10,2',
-          include_base_valve: true,
-          include_mid_valve: true,
-          presetSelect: 'none',
-        });
-        updateModeVisibility();
-      }
+      const profiles = {
+        kyb_sss_cartridge: {
+          values: {
+            mode: 'fork', fork_platform: 'coil', shock_architecture: 'monotube',
+            piston_diameter_mm: '24.0', shaft_diameter_mm: '12.0',
+            port_count: '4', port_diameter_mm: '6.1', base_port_count: '4', base_port_diameter_mm: '5.8', mid_port_count: '3', mid_port_diameter_mm: '4.8',
+            bleed_diameter_mm: '0.90', piston_bleed_hole_count: '2', piston_bleed_hole_diameter_mm: '0.80', rebound_orifice_diameter_mm: '1.20',
+            low_speed_clicks_out: '12', rebound_clicks_out: '12', high_speed_turns_out: '1.5',
+            hsc_poppet_diameter_mm: '6.0', hsc_spring_rate_n_per_mm: '18.0', hsc_preload_mm: '1.0', hsc_max_lift_mm: '1.0',
+            mid_valve_float_mm: '0.12', trampoline_preload_mm: '0.06', trampoline_spring_rate_n_per_mm: '20.0',
+            spring_rate_n_per_mm: '4.8', preload_mm: '5.0', travel_mm: '310', motion_ratio: '1.0',
+            oil_height_mm: '105', tube_inner_diameter_mm: '48', fork_positive_air_bar_abs: '8.8', fork_negative_air_bar_abs: '6.4', fork_secondary_volume_cc: '55',
+            include_base_valve: true, include_mid_valve: true,
+          },
+          stacks: {
+            compression_stack: '24,0.15,8\n22,0.15,2\n20,0.10,1',
+            rebound_stack: '22,0.15,6\n20,0.15,2\n18,0.10,1',
+            base_valve_stack: '22,0.15,4\n20,0.15,2',
+            mid_valve_stack: '20,0.10,3\n18,0.10,2',
+          },
+        },
+        kyb_sss_mx_fork: {
+          values: {
+            mode: 'fork', fork_platform: 'coil', shock_architecture: 'monotube',
+            piston_diameter_mm: '24.0', shaft_diameter_mm: '12.0',
+            port_count: '4', port_diameter_mm: '6.0', base_port_count: '4', base_port_diameter_mm: '5.7', mid_port_count: '3', mid_port_diameter_mm: '4.7',
+            bleed_diameter_mm: '0.85', piston_bleed_hole_count: '1', piston_bleed_hole_diameter_mm: '0.75', rebound_orifice_diameter_mm: '1.10',
+            low_speed_clicks_out: '10', rebound_clicks_out: '10', high_speed_turns_out: '1.25',
+            mid_valve_float_mm: '0.10', trampoline_preload_mm: '0.08', trampoline_spring_rate_n_per_mm: '24.0',
+            spring_rate_n_per_mm: '4.9', preload_mm: '5.0', travel_mm: '310', motion_ratio: '1.0',
+            include_base_valve: true, include_mid_valve: true,
+          },
+          stacks: {
+            compression_stack: '24,0.15,9\n22,0.15,3\n20,0.10,1',
+            rebound_stack: '22,0.15,7\n20,0.15,3\n18,0.10,1',
+            base_valve_stack: '22,0.15,5\n20,0.15,3',
+            mid_valve_stack: '20,0.10,3\n18,0.10,2',
+          },
+        },
+        kyb_sss_enduro_fork_crossover: {
+          values: {
+            mode: 'fork', fork_platform: 'coil', shock_architecture: 'monotube',
+            piston_diameter_mm: '24.0', shaft_diameter_mm: '12.0',
+            port_count: '4', port_diameter_mm: '6.1', base_port_count: '4', base_port_diameter_mm: '5.8', mid_port_count: '3', mid_port_diameter_mm: '4.8',
+            bleed_diameter_mm: '0.95', piston_bleed_hole_count: '2', piston_bleed_hole_diameter_mm: '0.85', rebound_orifice_diameter_mm: '1.25',
+            low_speed_clicks_out: '14', rebound_clicks_out: '14', high_speed_turns_out: '1.75',
+            mid_valve_float_mm: '0.14', trampoline_preload_mm: '0.04', trampoline_spring_rate_n_per_mm: '18.0',
+            spring_rate_n_per_mm: '4.6', preload_mm: '4.0', travel_mm: '310', motion_ratio: '1.0',
+            include_base_valve: true, include_mid_valve: true,
+          },
+          stacks: {
+            compression_stack: '24,0.15,6\n22,0.15,2\n20,0.10,1\n17,0.10,1\n14,0.10,1',
+            rebound_stack: '22,0.15,5\n20,0.15,2\n18,0.10,1\n16,0.10,1',
+            base_valve_stack: '22,0.15,4\n20,0.15,2\n16,0.10,1',
+            mid_valve_stack: '20,0.10,2\n18,0.10,1\n15,0.10,1',
+          },
+        },
+        kyb_enduro_shock_crossover: {
+          values: {
+            mode: 'shock', fork_platform: 'coil', shock_architecture: 'monotube',
+            piston_diameter_mm: '46.0', shaft_diameter_mm: '16.0',
+            port_count: '4', port_diameter_mm: '5.2', base_port_count: '3', base_port_diameter_mm: '5.0', mid_port_count: '3', mid_port_diameter_mm: '4.2',
+            bleed_diameter_mm: '0.80', piston_bleed_hole_count: '1', piston_bleed_hole_diameter_mm: '0.70', rebound_orifice_diameter_mm: '1.05',
+            low_speed_clicks_out: '16', rebound_clicks_out: '15', high_speed_turns_out: '1.9',
+            spring_rate_n_per_mm: '58.0', preload_mm: '8.0', travel_mm: '120', motion_ratio: '2.9',
+            initial_gas_pressure_bar: '7.5', reservoir_volume_cc: '140',
+            include_base_valve: true, include_mid_valve: true,
+          },
+          stacks: {
+            compression_stack: '34,0.20,6\n32,0.20,2\n30,0.15,1\n26,0.10,1',
+            rebound_stack: '32,0.20,5\n30,0.20,2\n28,0.15,1\n24,0.10,1',
+            base_valve_stack: '30,0.20,3\n28,0.15,2',
+            mid_valve_stack: '28,0.15,2\n24,0.10,1',
+          },
+        },
+      };
+
+      const profile = profiles[name];
+      if (!profile) return;
+
+      setFormValues({
+        ...(profile.values || {}),
+        ...(profile.stacks || {}),
+        presetSelect: name,
+      });
+      updateModeVisibility();
+      updateAbCompareTag(latestSimulationData);
     }
+
+
 
     async function initApp(){
       const savedToken = localStorage.getItem('shimstackor_payment_token');
@@ -1275,6 +1418,7 @@
       else resetLockedOutputs();
       loadDemo();
       updateHelpFabState();
+      updateAbCompareTag();
       const sawChoice = localStorage.getItem(INTRO_CHOICE_STORAGE_KEY) === '1';
       const sawTour = localStorage.getItem(INTRO_STORAGE_KEY) === '1';
       window.setTimeout(() => {
@@ -1335,6 +1479,12 @@
       }
       applyPreset(preset);
       if (paymentState.paid || paymentState.bypass) simulate();
+    });
+    document.getElementById('captureAbBtn').addEventListener('click', () => {
+      captureBaselineForAb();
+    });
+    document.getElementById('clearAbBtn').addEventListener('click', () => {
+      clearAbBaseline();
     });
     document.getElementById('helpTourFab').addEventListener('click', () => {
       endIntroTour(false);
