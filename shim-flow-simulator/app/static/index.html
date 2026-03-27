@@ -1143,108 +1143,118 @@
       simulate();
     }
 
+    function setFormValues(values){
+      for (const [id, value] of Object.entries(values)){
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (el.type === 'checkbox'){
+          el.checked = Boolean(value);
+        } else {
+          el.value = String(value);
+        }
+      }
+    }
+
     function loadDemo(){
-      document.getElementById('mode').value = 'fork';
-      document.getElementById('fork_platform').value = 'kyb_psf2';
-      document.getElementById('shock_architecture').value = 'monotube';
-      document.getElementById('port_diameter_mm').value = '6.2';
-      document.getElementById('base_port_diameter_mm').value = '5.8';
-      document.getElementById('mid_port_diameter_mm').value = '4.7';
-      document.getElementById('low_speed_clicks_out').value = '14';
-      document.getElementById('rebound_clicks_out').value = '13';
-      document.getElementById('high_speed_turns_out').value = '1.9';
-      document.getElementById('hsc_preload_mm').value = '0.9';
-      document.getElementById('piston_bleed_hole_count').value = '2';
-      document.getElementById('piston_bleed_hole_diameter_mm').value = '0.8';
-      document.getElementById('mid_valve_float_mm').value = '0.12';
-      document.getElementById('trampoline_preload_mm').value = '0.06';
-      document.getElementById('trampoline_spring_rate_n_per_mm').value = '20.0';
-      document.getElementById('spring_rate_n_per_mm').value = '4.8';
-      document.getElementById('travel_mm').value = '310';
-      document.getElementById('wheelbase_mm').value = '1480';
-      document.getElementById('steering_head_angle_deg').value = '24.0';
-      document.getElementById('triple_clamp_offset_mm').value = '32';
-      document.getElementById('front_tire_radius_mm').value = '340';
-      document.getElementById('rear_tire_radius_mm').value = '340';
-      document.getElementById('front_ride_height_mm').value = '0';
-      document.getElementById('rear_ride_height_mm').value = '6';
-      document.getElementById('swingarm_length_mm').value = '610';
-      document.getElementById('swingarm_pivot_height_mm').value = '360';
-      document.getElementById('rear_axle_height_mm').value = '330';
-      document.getElementById('countershaft_height_mm').value = '350';
-      document.getElementById('countershaft_to_rear_axle_mm').value = '580';
-      document.getElementById('cg_height_mm').value = '600';
-      document.getElementById('cg_from_front_axle_mm').value = '780';
-      document.getElementById('air_spring_pressure_psi').value = '171.2';
-      document.getElementById('air_piston_diameter_mm').value = '35.0';
-      document.getElementById('air_positive_volume_cc').value = '145';
-      document.getElementById('air_negative_volume_cc').value = '72';
-      document.getElementById('air_negative_pressure_ratio').value = '0.56';
-      document.getElementById('air_sag_mm').value = '65';
-      document.getElementById('air_reference_pressure_psi').value = '171.2';
-      document.getElementById('air_reference_equivalent_rate_n_mm').value = '9.81';
-      document.getElementById('air_reference_preload_mm').value = '4.0';
-      document.getElementById('air_target_rate_n_mm').value = '9.81';
-      document.getElementById('oil_height_mm').value = '105';
-      document.getElementById('fork_positive_air_bar_abs').value = '8.8';
-      document.getElementById('fork_negative_air_bar_abs').value = '6.4';
-      document.getElementById('compression_stack').value = '24,0.15,8\n22,0.15,2\n20,0.10,1';
-      document.getElementById('rebound_stack').value = '22,0.15,6\n20,0.15,2\n18,0.10,1';
-      document.getElementById('base_valve_stack').value = '22,0.15,4\n20,0.15,2';
-      document.getElementById('mid_valve_stack').value = '20,0.10,3\n18,0.10,2';
+      setFormValues({
+        mode: 'fork',
+        fork_platform: 'kyb_psf2',
+        shock_architecture: 'monotube',
+        port_diameter_mm: '6.2',
+        base_port_diameter_mm: '5.8',
+        mid_port_diameter_mm: '4.7',
+        low_speed_clicks_out: '14',
+        rebound_clicks_out: '13',
+        high_speed_turns_out: '1.9',
+        hsc_preload_mm: '0.9',
+        piston_bleed_hole_count: '2',
+        piston_bleed_hole_diameter_mm: '0.8',
+        mid_valve_float_mm: '0.12',
+        trampoline_preload_mm: '0.06',
+        trampoline_spring_rate_n_per_mm: '20.0',
+        spring_rate_n_per_mm: '4.8',
+        travel_mm: '310',
+        wheelbase_mm: '1480',
+        steering_head_angle_deg: '24.0',
+        triple_clamp_offset_mm: '32',
+        front_tire_radius_mm: '340',
+        rear_tire_radius_mm: '340',
+        front_ride_height_mm: '0',
+        rear_ride_height_mm: '6',
+        swingarm_length_mm: '610',
+        swingarm_pivot_height_mm: '360',
+        rear_axle_height_mm: '330',
+        countershaft_height_mm: '350',
+        countershaft_to_rear_axle_mm: '580',
+        cg_height_mm: '600',
+        cg_from_front_axle_mm: '780',
+        air_spring_pressure_psi: '171.2',
+        air_piston_diameter_mm: '35.0',
+        air_positive_volume_cc: '145',
+        air_negative_volume_cc: '72',
+        air_negative_pressure_ratio: '0.56',
+        air_sag_mm: '65',
+        air_reference_pressure_psi: '171.2',
+        air_reference_equivalent_rate_n_mm: '9.81',
+        air_reference_preload_mm: '4.0',
+        air_target_rate_n_mm: '9.81',
+        oil_height_mm: '105',
+        fork_positive_air_bar_abs: '8.8',
+        fork_negative_air_bar_abs: '6.4',
+        compression_stack: '24,0.15,8\n22,0.15,2\n20,0.10,1',
+        rebound_stack: '22,0.15,6\n20,0.15,2\n18,0.10,1',
+        base_valve_stack: '22,0.15,4\n20,0.15,2',
+        mid_valve_stack: '20,0.10,3\n18,0.10,2',
+      });
       updateModeVisibility();
       if (paymentState.paid || paymentState.bypass) simulate();
     }
 
     function applyPreset(name){
       if (name === 'kyb_sss_cartridge'){
-        document.getElementById('mode').value = 'fork';
-        document.getElementById('fork_platform').value = 'coil';
-        document.getElementById('shock_architecture').value = 'monotube';
-
-        document.getElementById('piston_diameter_mm').value = '24.0';
-        document.getElementById('shaft_diameter_mm').value = '12.0';
-        document.getElementById('port_count').value = '4';
-        document.getElementById('port_diameter_mm').value = '6.1';
-        document.getElementById('base_port_count').value = '4';
-        document.getElementById('base_port_diameter_mm').value = '5.8';
-        document.getElementById('mid_port_count').value = '3';
-        document.getElementById('mid_port_diameter_mm').value = '4.8';
-
-        document.getElementById('bleed_diameter_mm').value = '0.90';
-        document.getElementById('piston_bleed_hole_count').value = '2';
-        document.getElementById('piston_bleed_hole_diameter_mm').value = '0.80';
-        document.getElementById('rebound_orifice_diameter_mm').value = '1.20';
-
-        document.getElementById('low_speed_clicks_out').value = '12';
-        document.getElementById('rebound_clicks_out').value = '12';
-        document.getElementById('high_speed_turns_out').value = '1.5';
-        document.getElementById('hsc_poppet_diameter_mm').value = '6.0';
-        document.getElementById('hsc_spring_rate_n_per_mm').value = '18.0';
-        document.getElementById('hsc_preload_mm').value = '1.0';
-        document.getElementById('hsc_max_lift_mm').value = '1.0';
-        document.getElementById('mid_valve_float_mm').value = '0.12';
-        document.getElementById('trampoline_preload_mm').value = '0.06';
-        document.getElementById('trampoline_spring_rate_n_per_mm').value = '20.0';
-
-        document.getElementById('spring_rate_n_per_mm').value = '4.8';
-        document.getElementById('preload_mm').value = '5.0';
-        document.getElementById('travel_mm').value = '310';
-        document.getElementById('motion_ratio').value = '1.0';
-        document.getElementById('oil_height_mm').value = '105';
-        document.getElementById('tube_inner_diameter_mm').value = '48';
-        document.getElementById('fork_positive_air_bar_abs').value = '8.8';
-        document.getElementById('fork_negative_air_bar_abs').value = '6.4';
-        document.getElementById('fork_secondary_volume_cc').value = '55';
-
-        document.getElementById('compression_stack').value = '24,0.15,8\n22,0.15,2\n20,0.10,1';
-        document.getElementById('rebound_stack').value = '22,0.15,6\n20,0.15,2\n18,0.10,1';
-        document.getElementById('base_valve_stack').value = '22,0.15,4\n20,0.15,2';
-        document.getElementById('mid_valve_stack').value = '20,0.10,3\n18,0.10,2';
-
-        document.getElementById('include_base_valve').checked = true;
-        document.getElementById('include_mid_valve').checked = true;
-        document.getElementById('presetSelect').value = 'none';
+        setFormValues({
+          mode: 'fork',
+          fork_platform: 'coil',
+          shock_architecture: 'monotube',
+          piston_diameter_mm: '24.0',
+          shaft_diameter_mm: '12.0',
+          port_count: '4',
+          port_diameter_mm: '6.1',
+          base_port_count: '4',
+          base_port_diameter_mm: '5.8',
+          mid_port_count: '3',
+          mid_port_diameter_mm: '4.8',
+          bleed_diameter_mm: '0.90',
+          piston_bleed_hole_count: '2',
+          piston_bleed_hole_diameter_mm: '0.80',
+          rebound_orifice_diameter_mm: '1.20',
+          low_speed_clicks_out: '12',
+          rebound_clicks_out: '12',
+          high_speed_turns_out: '1.5',
+          hsc_poppet_diameter_mm: '6.0',
+          hsc_spring_rate_n_per_mm: '18.0',
+          hsc_preload_mm: '1.0',
+          hsc_max_lift_mm: '1.0',
+          mid_valve_float_mm: '0.12',
+          trampoline_preload_mm: '0.06',
+          trampoline_spring_rate_n_per_mm: '20.0',
+          spring_rate_n_per_mm: '4.8',
+          preload_mm: '5.0',
+          travel_mm: '310',
+          motion_ratio: '1.0',
+          oil_height_mm: '105',
+          tube_inner_diameter_mm: '48',
+          fork_positive_air_bar_abs: '8.8',
+          fork_negative_air_bar_abs: '6.4',
+          fork_secondary_volume_cc: '55',
+          compression_stack: '24,0.15,8\n22,0.15,2\n20,0.10,1',
+          rebound_stack: '22,0.15,6\n20,0.15,2\n18,0.10,1',
+          base_valve_stack: '22,0.15,4\n20,0.15,2',
+          mid_valve_stack: '20,0.10,3\n18,0.10,2',
+          include_base_valve: true,
+          include_mid_valve: true,
+          presetSelect: 'none',
+        });
         updateModeVisibility();
       }
     }

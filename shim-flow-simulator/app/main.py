@@ -80,8 +80,8 @@ class SimulationInput(BaseModel):
     clamp_diameter_mm: float = Field(8.0, gt=0.1)
     include_base_valve: bool = True
     include_mid_valve: bool = True
-    mid_valve_float_mm: float = Field(0.10, ge=0, le=1.5)
-    trampoline_preload_mm: float = Field(0.0, ge=0, le=2.0)
+    mid_valve_float_mm: float = Field(0.12, ge=0, le=1.5)
+    trampoline_preload_mm: float = Field(0.06, ge=0, le=2.0)
     trampoline_spring_rate_n_per_mm: float = Field(20.0, ge=0, le=200.0)
 
     oil_density_kg_m3: float = Field(850.0, gt=100)
