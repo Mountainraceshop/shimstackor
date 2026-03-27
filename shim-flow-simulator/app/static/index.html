@@ -148,6 +148,20 @@
           <div><label>Preload mm</label><input id="preload_mm" type="number" value="5"></div>
           <div><label>Travel mm</label><input id="travel_mm" type="number" value="300"></div>
           <div><label>Motion ratio</label><input id="motion_ratio" type="number" step="0.01" value="1"></div>
+          <div><label>Wheelbase mm</label><input id="wheelbase_mm" type="number" value="1480"></div>
+          <div><label>Steering head angle deg</label><input id="steering_head_angle_deg" type="number" step="0.1" value="24.0"></div>
+          <div><label>Triple clamp offset mm</label><input id="triple_clamp_offset_mm" type="number" step="0.1" value="32"></div>
+          <div><label>Front tire radius mm</label><input id="front_tire_radius_mm" type="number" step="0.1" value="340"></div>
+          <div><label>Rear tire radius mm</label><input id="rear_tire_radius_mm" type="number" step="0.1" value="340"></div>
+          <div><label>Front ride-height delta mm</label><input id="front_ride_height_mm" type="number" step="0.1" value="0"></div>
+          <div><label>Rear ride-height delta mm</label><input id="rear_ride_height_mm" type="number" step="0.1" value="0"></div>
+          <div><label>Swingarm length mm</label><input id="swingarm_length_mm" type="number" step="0.1" value="610"></div>
+          <div><label>Swingarm pivot height mm</label><input id="swingarm_pivot_height_mm" type="number" step="0.1" value="360"></div>
+          <div><label>Rear axle height mm</label><input id="rear_axle_height_mm" type="number" step="0.1" value="330"></div>
+          <div><label>Countershaft height mm</label><input id="countershaft_height_mm" type="number" step="0.1" value="350"></div>
+          <div><label>Countershaft to rear axle mm</label><input id="countershaft_to_rear_axle_mm" type="number" step="0.1" value="580"></div>
+          <div><label>CG height mm</label><input id="cg_height_mm" type="number" step="0.1" value="600"></div>
+          <div><label>CG from front axle mm</label><input id="cg_from_front_axle_mm" type="number" step="0.1" value="780"></div>
           <div><label>Oil height mm</label><input id="oil_height_mm" type="number" value="110"></div>
           <div><label>Tube dia mm</label><input id="tube_inner_diameter_mm" type="number" value="48"></div>
           <div><label>Fork + chamber bar abs</label><input id="fork_positive_air_bar_abs" type="number" step="0.1" value="8"></div>
@@ -258,6 +272,18 @@
             <tr><td>Reservoir pressure probe</td><td id="sumResPressure">-</td></tr>
             <tr><td>Cavitation margin @ 0.3</td><td id="sumCav03">-</td></tr>
             <tr><td>Spring end pressure</td><td id="sumAirEnd">-</td></tr>
+          </table>
+          <div class="section" style="margin-top:12px">Chassis measurements</div>
+          <table class="table">
+            <tr><td>Trail</td><td id="chTrail">-</td></tr>
+            <tr><td>Effective rake</td><td id="chRake">-</td></tr>
+            <tr><td>Chassis pitch</td><td id="chPitch">-</td></tr>
+            <tr><td>Swingarm angle</td><td id="chSwingarm">-</td></tr>
+            <tr><td>Chain angle</td><td id="chChain">-</td></tr>
+            <tr><td>Anti-squat proxy</td><td id="chAntiSquat">-</td></tr>
+            <tr><td>Static weight split F/R</td><td id="chWeight">-</td></tr>
+            <tr><td>Wheel rate F/R</td><td id="chWheelRate">-</td></tr>
+            <tr><td>Handling flags</td><td id="chFlags">-</td></tr>
           </table>
           <div class="section" style="margin-top:12px">Shim stacks</div>
           <div class="stack-panels">
@@ -441,7 +467,10 @@
         'mid_port_count','mid_port_diameter_mm','bleed_diameter_mm','rebound_orifice_diameter_mm',
         'low_speed_clicks_out','rebound_clicks_out','high_speed_turns_out','hsc_poppet_diameter_mm',
         'hsc_spring_rate_n_per_mm','hsc_preload_mm','hsc_max_lift_mm','oil_temperature_c','oil_viscosity_cst',
-        'discharge_coefficient','spring_rate_n_per_mm','preload_mm','travel_mm','motion_ratio','oil_height_mm',
+        'discharge_coefficient','spring_rate_n_per_mm','preload_mm','travel_mm','motion_ratio',
+        'wheelbase_mm','steering_head_angle_deg','triple_clamp_offset_mm','front_tire_radius_mm','rear_tire_radius_mm',
+        'front_ride_height_mm','rear_ride_height_mm','swingarm_length_mm','swingarm_pivot_height_mm','rear_axle_height_mm',
+        'countershaft_height_mm','countershaft_to_rear_axle_mm','cg_height_mm','cg_from_front_axle_mm','oil_height_mm',
         'tube_inner_diameter_mm','fork_positive_air_bar_abs','fork_negative_air_bar_abs','fork_secondary_volume_cc',
         'initial_gas_pressure_bar','reservoir_volume_cc','shaft_velocity_max_m_s','clamp_diameter_mm'
       ];
@@ -543,6 +572,17 @@
       document.getElementById('sumResPressure').textContent = comp03.reservoir_pressure_bar_abs.toFixed(2) + ' bar abs';
       document.getElementById('sumCav03').textContent = comp03.cavitation_margin_bar.toFixed(2) + ' bar';
       document.getElementById('sumAirEnd').textContent = springEnd.air_pressure_bar_abs.toFixed(2) + ' bar abs';
+      const ch = data.chassis || {};
+      document.getElementById('chTrail').textContent = (ch.trail_mm || 0).toFixed(1) + ' mm';
+      document.getElementById('chRake').textContent = (ch.effective_rake_deg || 0).toFixed(2) + ' deg';
+      document.getElementById('chPitch').textContent = (ch.chassis_pitch_deg || 0).toFixed(2) + ' deg';
+      document.getElementById('chSwingarm').textContent = (ch.swingarm_angle_deg || 0).toFixed(2) + ' deg';
+      document.getElementById('chChain').textContent = (ch.chain_angle_deg || 0).toFixed(2) + ' deg';
+      document.getElementById('chAntiSquat').textContent = (ch.anti_squat_pct_proxy || 0).toFixed(1) + ' %';
+      document.getElementById('chWeight').textContent = `${(ch.front_weight_pct || 0).toFixed(1)} / ${(ch.rear_weight_pct || 0).toFixed(1)} %`;
+      document.getElementById('chWheelRate').textContent = `${(ch.wheel_rate_front_n_mm || 0).toFixed(2)} / ${(ch.wheel_rate_rear_n_mm || 0).toFixed(2)} N/mm`;
+      const flags = ch.handling_flags || {};
+      document.getElementById('chFlags').textContent = `${flags.trail_balance || '-'}; ${flags.anti_squat_balance || '-'}`;
       updateAnimation(comp03);
     }
 
@@ -608,6 +648,20 @@
       document.getElementById('hsc_preload_mm').value = '0.9';
       document.getElementById('spring_rate_n_per_mm').value = '4.8';
       document.getElementById('travel_mm').value = '310';
+      document.getElementById('wheelbase_mm').value = '1480';
+      document.getElementById('steering_head_angle_deg').value = '24.0';
+      document.getElementById('triple_clamp_offset_mm').value = '32';
+      document.getElementById('front_tire_radius_mm').value = '340';
+      document.getElementById('rear_tire_radius_mm').value = '340';
+      document.getElementById('front_ride_height_mm').value = '0';
+      document.getElementById('rear_ride_height_mm').value = '6';
+      document.getElementById('swingarm_length_mm').value = '610';
+      document.getElementById('swingarm_pivot_height_mm').value = '360';
+      document.getElementById('rear_axle_height_mm').value = '330';
+      document.getElementById('countershaft_height_mm').value = '350';
+      document.getElementById('countershaft_to_rear_axle_mm').value = '580';
+      document.getElementById('cg_height_mm').value = '600';
+      document.getElementById('cg_from_front_axle_mm').value = '780';
       document.getElementById('oil_height_mm').value = '105';
       document.getElementById('fork_positive_air_bar_abs').value = '8.8';
       document.getElementById('fork_negative_air_bar_abs').value = '6.4';

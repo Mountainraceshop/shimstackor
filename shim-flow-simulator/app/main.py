@@ -87,6 +87,22 @@ class SimulationInput(BaseModel):
     rider_mass_kg: float = Field(85.0, gt=1)
     bike_mass_kg: float = Field(110.0, gt=1)
 
+    # Chassis measurement / geometry inputs
+    wheelbase_mm: float = Field(1480.0, gt=500)
+    steering_head_angle_deg: float = Field(24.0, gt=10, lt=40)  # rake from vertical
+    triple_clamp_offset_mm: float = Field(32.0, gt=0, lt=100)
+    front_tire_radius_mm: float = Field(340.0, gt=100)
+    rear_tire_radius_mm: float = Field(340.0, gt=100)
+    front_ride_height_mm: float = Field(0.0, ge=-100, le=100)
+    rear_ride_height_mm: float = Field(0.0, ge=-100, le=100)
+    swingarm_length_mm: float = Field(610.0, gt=200)
+    swingarm_pivot_height_mm: float = Field(360.0, gt=100)
+    rear_axle_height_mm: float = Field(330.0, gt=100)
+    countershaft_height_mm: float = Field(350.0, gt=100)
+    countershaft_to_rear_axle_mm: float = Field(580.0, gt=100)
+    cg_height_mm: float = Field(600.0, gt=100)
+    cg_from_front_axle_mm: float = Field(780.0, gt=0)
+
     # Fork spring / chamber inputs
     oil_height_mm: float = Field(110.0, gt=1)
     tube_inner_diameter_mm: float = Field(48.0, gt=1)
@@ -542,6 +558,81 @@ def damping_ratio_estimate(inp: SimulationInput, comp_force_03: float, reb_force
     }
 
 
+def clamp(v: float, lo: float, hi: float) -> float:
+    return max(lo, min(v, hi))
+
+
+def chassis_measurement(inp: SimulationInput) -> dict:
+    # Chassis pitch: positive => rear higher than front.
+    pitch_rad = np.arctan2(inp.rear_ride_height_mm - inp.front_ride_height_mm, max(inp.wheelbase_mm, 1.0))
+    pitch_deg = float(np.degrees(pitch_rad))
+
+    # Effective rake from vertical with ride-height attitude included.
+    rake_deg_eff = float(inp.steering_head_angle_deg + pitch_deg)
+    rake_deg_eff = float(clamp(rake_deg_eff, 8.0, 45.0))
+    rake_rad_eff = np.radians(rake_deg_eff)
+
+    # Motorcycle convention proxy: trail ~= (R*sin(rake)-offset)/cos(rake), rake from vertical.
+    trail_mm = (
+        (inp.front_tire_radius_mm * np.sin(rake_rad_eff) - inp.triple_clamp_offset_mm)
+        / max(np.cos(rake_rad_eff), 1e-6)
+    )
+
+    swingarm_angle_rad = np.arctan2(
+        inp.rear_axle_height_mm - inp.swingarm_pivot_height_mm,
+        max(inp.swingarm_length_mm, 1.0),
+    )
+    swingarm_angle_deg = float(np.degrees(swingarm_angle_rad))
+
+    chain_angle_rad = np.arctan2(
+        inp.rear_axle_height_mm - inp.countershaft_height_mm,
+        max(inp.countershaft_to_rear_axle_mm, 1.0),
+    )
+    chain_angle_deg = float(np.degrees(chain_angle_rad))
+
+    # Practical anti-squat proxy for setup guidance.
+    denom = max(abs(np.tan(swingarm_angle_rad)), 0.05)
+    geom_factor = max(inp.cg_height_mm / max(inp.rear_tire_radius_mm, 1.0), 0.6)
+    anti_squat_pct = float(100.0 * (np.tan(chain_angle_rad) / denom) / geom_factor)
+    anti_squat_pct = float(clamp(anti_squat_pct, 20.0, 180.0))
+
+    cg_x = clamp(inp.cg_from_front_axle_mm, 1.0, max(inp.wheelbase_mm - 1.0, 2.0))
+    rear_pct = 100.0 * cg_x / inp.wheelbase_mm
+    front_pct = 100.0 - rear_pct
+
+    wheel_rate_front_n_mm = inp.spring_rate_n_per_mm
+    wheel_rate_rear_n_mm = inp.spring_rate_n_per_mm / (inp.motion_ratio**2)
+
+    trail_state = "balanced"
+    if trail_mm < 95:
+        trail_state = "quick / nervous"
+    elif trail_mm > 115:
+        trail_state = "stable / slow-turning"
+
+    anti_squat_state = "balanced"
+    if anti_squat_pct < 85:
+        anti_squat_state = "low anti-squat (more squat)"
+    elif anti_squat_pct > 120:
+        anti_squat_state = "high anti-squat (less squat / harsher drive)"
+
+    return {
+        "trail_mm": float(trail_mm),
+        "effective_rake_deg": rake_deg_eff,
+        "chassis_pitch_deg": pitch_deg,
+        "swingarm_angle_deg": swingarm_angle_deg,
+        "chain_angle_deg": chain_angle_deg,
+        "anti_squat_pct_proxy": anti_squat_pct,
+        "front_weight_pct": float(front_pct),
+        "rear_weight_pct": float(rear_pct),
+        "wheel_rate_front_n_mm": float(wheel_rate_front_n_mm),
+        "wheel_rate_rear_n_mm": float(wheel_rate_rear_n_mm),
+        "handling_flags": {
+            "trail_balance": trail_state,
+            "anti_squat_balance": anti_squat_state,
+        },
+    }
+
+
 def parse_dyno_csv(csv_text: str) -> dict:
     fh = io.StringIO(csv_text.strip())
     sample = fh.read(1024)
@@ -942,6 +1033,7 @@ def simulate(inp: SimulationInput) -> JSONResponse:
     ratios = damping_ratio_estimate(inp, comp_force_03, reb_force_03)
 
     comp_03 = min(compression, key=lambda x: abs(x["velocity_m_s"] - 0.3))
+    chassis = chassis_measurement(inp)
     comp_rec, comp_note = recommended_stack(inp.compression_stack, "compression", ratios["compression_zeta"])
     reb_rec, reb_note = recommended_stack(inp.rebound_stack, "rebound", ratios["rebound_zeta"])
     result = {
@@ -961,6 +1053,7 @@ def simulate(inp: SimulationInput) -> JSONResponse:
             "cavitation_margin_bar_at_03": comp_03["cavitation_margin_bar"],
             **ratios,
         },
+        "chassis": chassis,
         "stacks": {
             "input": {
                 "compression": stack_to_rows(inp.compression_stack),
