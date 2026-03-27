@@ -86,6 +86,10 @@
     .mode-hidden{display:none !important}
     .mode-raw-selector{display:none}
     .mode-note{font-size:12px;color:#cfe0ff;margin:0 0 10px;line-height:1.45}
+    .preset-block{margin:0 0 10px;padding:10px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(0,0,0,.14)}
+    .preset-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+    .preset-row select{padding:9px}
+    .preset-row button{width:auto;white-space:nowrap;padding:9px 12px}
     .intro-overlay{
       position:fixed;inset:0;z-index:12000;display:none;align-items:flex-end;justify-content:center;
       padding:24px;background:linear-gradient(180deg,rgba(5,9,18,.35),rgba(5,9,18,.8));
@@ -214,6 +218,16 @@
         </div>
         <div id="modeNote" class="mode-note">
           Fork mode: air-fork platform and chamber fields are visible.
+        </div>
+        <div class="preset-block">
+          <label>Preset setup</label>
+          <div class="preset-row">
+            <select id="presetSelect">
+              <option value="none">Select preset...</option>
+              <option value="kyb_sss_cartridge">KYB SSS cartridge baseline</option>
+            </select>
+            <button id="applyPresetBtn" type="button">Apply preset</button>
+          </div>
         </div>
         <div class="form-grid">
           <div class="mode-raw-selector"><label>Machine</label><select id="mode"><option value="fork">Fork</option><option value="shock">Shock</option></select></div>
@@ -1182,6 +1196,59 @@
       if (paymentState.paid || paymentState.bypass) simulate();
     }
 
+    function applyPreset(name){
+      if (name === 'kyb_sss_cartridge'){
+        document.getElementById('mode').value = 'fork';
+        document.getElementById('fork_platform').value = 'coil';
+        document.getElementById('shock_architecture').value = 'monotube';
+
+        document.getElementById('piston_diameter_mm').value = '24.0';
+        document.getElementById('shaft_diameter_mm').value = '12.0';
+        document.getElementById('port_count').value = '4';
+        document.getElementById('port_diameter_mm').value = '6.1';
+        document.getElementById('base_port_count').value = '4';
+        document.getElementById('base_port_diameter_mm').value = '5.8';
+        document.getElementById('mid_port_count').value = '3';
+        document.getElementById('mid_port_diameter_mm').value = '4.8';
+
+        document.getElementById('bleed_diameter_mm').value = '0.90';
+        document.getElementById('piston_bleed_hole_count').value = '2';
+        document.getElementById('piston_bleed_hole_diameter_mm').value = '0.80';
+        document.getElementById('rebound_orifice_diameter_mm').value = '1.20';
+
+        document.getElementById('low_speed_clicks_out').value = '12';
+        document.getElementById('rebound_clicks_out').value = '12';
+        document.getElementById('high_speed_turns_out').value = '1.5';
+        document.getElementById('hsc_poppet_diameter_mm').value = '6.0';
+        document.getElementById('hsc_spring_rate_n_per_mm').value = '18.0';
+        document.getElementById('hsc_preload_mm').value = '1.0';
+        document.getElementById('hsc_max_lift_mm').value = '1.0';
+        document.getElementById('mid_valve_float_mm').value = '0.12';
+        document.getElementById('trampoline_preload_mm').value = '0.06';
+        document.getElementById('trampoline_spring_rate_n_per_mm').value = '20.0';
+
+        document.getElementById('spring_rate_n_per_mm').value = '4.8';
+        document.getElementById('preload_mm').value = '5.0';
+        document.getElementById('travel_mm').value = '310';
+        document.getElementById('motion_ratio').value = '1.0';
+        document.getElementById('oil_height_mm').value = '105';
+        document.getElementById('tube_inner_diameter_mm').value = '48';
+        document.getElementById('fork_positive_air_bar_abs').value = '8.8';
+        document.getElementById('fork_negative_air_bar_abs').value = '6.4';
+        document.getElementById('fork_secondary_volume_cc').value = '55';
+
+        document.getElementById('compression_stack').value = '24,0.15,8\n22,0.15,2\n20,0.10,1';
+        document.getElementById('rebound_stack').value = '22,0.15,6\n20,0.15,2\n18,0.10,1';
+        document.getElementById('base_valve_stack').value = '22,0.15,4\n20,0.15,2';
+        document.getElementById('mid_valve_stack').value = '20,0.10,3\n18,0.10,2';
+
+        document.getElementById('include_base_valve').checked = true;
+        document.getElementById('include_mid_valve').checked = true;
+        document.getElementById('presetSelect').value = 'none';
+        updateModeVisibility();
+      }
+    }
+
     async function initApp(){
       const savedToken = localStorage.getItem('shimstackor_payment_token');
       if (savedToken){
@@ -1250,6 +1317,15 @@
       updateModeVisibility();
     });
     document.getElementById('mode').addEventListener('change', updateModeVisibility);
+    document.getElementById('applyPresetBtn').addEventListener('click', () => {
+      const preset = document.getElementById('presetSelect').value;
+      if (!preset || preset === 'none'){
+        alert('Select a preset first.');
+        return;
+      }
+      applyPreset(preset);
+      if (paymentState.paid || paymentState.bypass) simulate();
+    });
     document.getElementById('helpTourFab').addEventListener('click', () => {
       endIntroTour(false);
       showIntroChoiceOverlay();
