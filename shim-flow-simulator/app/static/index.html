@@ -32,6 +32,24 @@
     button{cursor:pointer;font-weight:700;background:linear-gradient(180deg,#2283ff,#1561c7)}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .note{font-size:12px;color:var(--muted);line-height:1.45;margin-top:10px}
+    .paywall{margin-top:12px;padding:12px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(0,0,0,.2)}
+    .paywall h4{margin:0 0 6px;font-size:14px}
+    .paywall .price{font-size:20px;font-weight:700;margin:3px 0 8px}
+    .pay-status{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.4}
+    .pay-status.ok{color:#66e0a3}
+    .pay-status.err{color:#ff8a8a}
+    .lockable{position:relative}
+    .lockable-content{transition:filter .2s ease,opacity .2s ease}
+    .lockable.locked .lockable-content{filter:blur(6px);opacity:.55;pointer-events:none;user-select:none}
+    .lock-overlay{
+      display:none;position:absolute;inset:0;z-index:5;
+      align-items:center;justify-content:center;text-align:center;padding:18px;
+      background:linear-gradient(180deg,rgba(8,16,30,.55),rgba(8,16,30,.75))
+    }
+    .lock-overlay .inner{max-width:320px}
+    .lock-overlay .inner .title{font-size:16px;font-weight:700}
+    .lock-overlay .inner .desc{font-size:13px;color:#d3e3ff;margin-top:6px;line-height:1.45}
+    .lockable.locked .lock-overlay{display:flex}
     .viz{padding:0;overflow:hidden}
     .viz-top{display:flex;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
     .viz-wrap{padding:16px}
@@ -48,6 +66,9 @@
     .k{font-size:12px;color:var(--muted)} .v{font-size:20px;font-weight:700;margin-top:6px}
     .table{width:100%;border-collapse:collapse;font-size:13px}
     .table td{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+    .stack-panels{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+    .stack-box{border:1px solid var(--line);background:rgba(0,0,0,.16);border-radius:10px;padding:8px}
+    .stack-box pre{margin:6px 0 0;white-space:pre-wrap;font-size:11px;line-height:1.35;color:#d7e6ff}
     .chart{height:250px}
     .charts{display:grid;gap:16px;margin-top:16px}
     @media (max-width:1320px){
@@ -175,65 +196,237 @@
           <button id="loadDynoBtn" type="button" style="margin-top:8px">Load dyno CSV</button>
         </div>
         <div class="note">CSV must include headers with velocity and force columns. Direction column is optional.</div>
-      </div>
 
-      <div class="card viz">
-        <div class="viz-top">
-          <div>
-            <div class="section" style="margin:0">Live engineering view</div>
-            <div class="sub" id="modeLabel">Pressure-flow opening equilibrium</div>
-          </div>
-          <div class="tag" id="velocityTag">0.30 m/s focus</div>
-        </div>
-        <div class="viz-wrap">
-          <div class="stage">
-            <div class="tube"></div>
-            <div class="oil" id="oil"></div>
-            <div class="shaft" id="shaft"></div>
-            <div class="piston" id="piston"></div>
-            <div class="shim" id="shim1" style="width:62px"></div>
-            <div class="shim" id="shim2" style="width:54px"></div>
-            <div class="flow" id="flow1" style="left:calc(50% - 145px);top:175px;width:100px"></div>
-            <div class="flow" id="flow2" style="left:calc(50% + 45px);top:212px;width:90px"></div>
-          </div>
-          <div class="metrics">
-            <div class="metric"><div class="k">Compression zeta</div><div class="v" id="compZeta">-</div></div>
-            <div class="metric"><div class="k">Rebound zeta</div><div class="v" id="rebZeta">-</div></div>
-            <div class="metric"><div class="k">Main port area mm2</div><div class="v" id="portArea">-</div></div>
-            <div class="metric"><div class="k">Cavitation margin bar</div><div class="v" id="cavMargin">-</div></div>
-          </div>
+        <div class="paywall">
+          <h4>Unlock Calculated Shim Stacks</h4>
+          <div class="price">USD $100.00 / analysis</div>
+          <div class="note" style="margin-top:0">Enter all setup details first, then complete payment to reveal calculated stacks and full engineering outputs.</div>
+          <div id="paypalButtons" style="margin-top:8px"></div>
+          <div id="paymentStatus" class="pay-status">Loading payment gateway...</div>
         </div>
       </div>
 
-      <div class="card pane">
-        <h3 class="section">Engineering summary</h3>
-        <table class="table">
-          <tr><td>Machine / platform</td><td id="sumPlatform">-</td></tr>
-          <tr><td>Main port area</td><td id="sumPortArea">-</td></tr>
-          <tr><td>Base / mid port area</td><td id="sumBaseMid">-</td></tr>
-          <tr><td>Bleed / rebound area</td><td id="sumBleed">-</td></tr>
-          <tr><td>Critical damping</td><td id="sumCritical">-</td></tr>
-          <tr><td>Compression force @ 0.3</td><td id="sumComp03">-</td></tr>
-          <tr><td>Rebound force @ 0.3</td><td id="sumReb03">-</td></tr>
-          <tr><td>Main / bypass flow @ 0.3</td><td id="sumFlowSplit">-</td></tr>
-          <tr><td>Piston shim lift @ 0.3</td><td id="sumLift">-</td></tr>
-          <tr><td>Reservoir pressure probe</td><td id="sumResPressure">-</td></tr>
-          <tr><td>Cavitation margin @ 0.3</td><td id="sumCav03">-</td></tr>
-          <tr><td>Spring end pressure</td><td id="sumAirEnd">-</td></tr>
-        </table>
+      <div class="card viz lockable locked" id="vizLockable">
+        <div class="lockable-content">
+          <div class="viz-top">
+            <div>
+              <div class="section" style="margin:0">Live engineering view</div>
+              <div class="sub" id="modeLabel">Pressure-flow opening equilibrium</div>
+            </div>
+            <div class="tag" id="velocityTag">0.30 m/s focus</div>
+          </div>
+          <div class="viz-wrap">
+            <div class="stage">
+              <div class="tube"></div>
+              <div class="oil" id="oil"></div>
+              <div class="shaft" id="shaft"></div>
+              <div class="piston" id="piston"></div>
+              <div class="shim" id="shim1" style="width:62px"></div>
+              <div class="shim" id="shim2" style="width:54px"></div>
+              <div class="flow" id="flow1" style="left:calc(50% - 145px);top:175px;width:100px"></div>
+              <div class="flow" id="flow2" style="left:calc(50% + 45px);top:212px;width:90px"></div>
+            </div>
+            <div class="metrics">
+              <div class="metric"><div class="k">Compression zeta</div><div class="v" id="compZeta">-</div></div>
+              <div class="metric"><div class="k">Rebound zeta</div><div class="v" id="rebZeta">-</div></div>
+              <div class="metric"><div class="k">Main port area mm2</div><div class="v" id="portArea">-</div></div>
+              <div class="metric"><div class="k">Cavitation margin bar</div><div class="v" id="cavMargin">-</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="lock-overlay">
+          <div class="inner">
+            <div class="title">Payment required</div>
+            <div class="desc">Complete USD $100.00 PayPal payment to unlock the live engineering simulation and charts.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card pane lockable locked" id="summaryLockable">
+        <div class="lockable-content">
+          <h3 class="section">Engineering summary</h3>
+          <table class="table">
+            <tr><td>Machine / platform</td><td id="sumPlatform">-</td></tr>
+            <tr><td>Main port area</td><td id="sumPortArea">-</td></tr>
+            <tr><td>Base / mid port area</td><td id="sumBaseMid">-</td></tr>
+            <tr><td>Bleed / rebound area</td><td id="sumBleed">-</td></tr>
+            <tr><td>Critical damping</td><td id="sumCritical">-</td></tr>
+            <tr><td>Compression force @ 0.3</td><td id="sumComp03">-</td></tr>
+            <tr><td>Rebound force @ 0.3</td><td id="sumReb03">-</td></tr>
+            <tr><td>Main / bypass flow @ 0.3</td><td id="sumFlowSplit">-</td></tr>
+            <tr><td>Piston shim lift @ 0.3</td><td id="sumLift">-</td></tr>
+            <tr><td>Reservoir pressure probe</td><td id="sumResPressure">-</td></tr>
+            <tr><td>Cavitation margin @ 0.3</td><td id="sumCav03">-</td></tr>
+            <tr><td>Spring end pressure</td><td id="sumAirEnd">-</td></tr>
+          </table>
+          <div class="section" style="margin-top:12px">Shim stacks</div>
+          <div class="stack-panels">
+            <div class="stack-box"><div class="k">Input Compression</div><pre id="stackInputComp">Locked until payment</pre></div>
+            <div class="stack-box"><div class="k">Recommended Compression</div><pre id="stackRecComp">Locked until payment</pre></div>
+            <div class="stack-box"><div class="k">Input Rebound</div><pre id="stackInputReb">Locked until payment</pre></div>
+            <div class="stack-box"><div class="k">Recommended Rebound</div><pre id="stackRecReb">Locked until payment</pre></div>
+          </div>
+          <div class="note" id="stackNotes">Complete payment to reveal calculated recommendations.</div>
+        </div>
+        <div class="lock-overlay">
+          <div class="inner">
+            <div class="title">Calculated stacks are locked</div>
+            <div class="desc">Pay USD $100.00 via PayPal to unlock recommended shim stacks and full analysis outputs.</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="charts">
-      <div class="card pane"><div id="forceChart" class="chart"></div></div>
-      <div class="card pane"><div id="pressureChart" class="chart"></div></div>
-      <div class="card pane"><div id="liftChart" class="chart"></div></div>
-      <div class="card pane"><div id="springChart" class="chart"></div></div>
+    <div class="lockable locked" id="chartsLockable">
+      <div class="lockable-content">
+        <div class="charts">
+          <div class="card pane"><div id="forceChart" class="chart"></div></div>
+          <div class="card pane"><div id="pressureChart" class="chart"></div></div>
+          <div class="card pane"><div id="liftChart" class="chart"></div></div>
+          <div class="card pane"><div id="springChart" class="chart"></div></div>
+        </div>
+      </div>
+      <div class="lock-overlay">
+        <div class="inner">
+          <div class="title">Charts locked</div>
+          <div class="desc">Unlock charts and computed stack recommendations after PayPal payment confirmation.</div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>
     let dynoOverlay = {compression: [], rebound: []};
+    const paymentState = {
+      enabled: false,
+      bypass: false,
+      paid: false,
+      paymentToken: '',
+      paypalClientId: '',
+      pendingToken: '',
+      pendingOrderId: '',
+    };
+
+    function setPaymentStatus(message, kind=''){
+      const el = document.getElementById('paymentStatus');
+      el.textContent = message;
+      el.className = 'pay-status' + (kind ? ' ' + kind : '');
+    }
+
+    function setLocked(locked){
+      for (const id of ['vizLockable','summaryLockable','chartsLockable']){
+        document.getElementById(id).classList.toggle('locked', locked);
+      }
+      document.getElementById('simulateBtn').disabled = locked;
+    }
+
+    function stackRowsToText(rows){
+      if (!rows || !rows.length) return 'No stack data';
+      return rows.map(r => `${r.diameter_mm.toFixed(1)} x ${r.thickness_mm.toFixed(2)} mm (qty ${r.qty})`).join('\n');
+    }
+
+    function updateStackTables(stacks){
+      if (!stacks) return;
+      document.getElementById('stackInputComp').textContent = stackRowsToText(stacks.input?.compression || []);
+      document.getElementById('stackRecComp').textContent = stackRowsToText(stacks.recommended?.compression || []);
+      document.getElementById('stackInputReb').textContent = stackRowsToText(stacks.input?.rebound || []);
+      document.getElementById('stackRecReb').textContent = stackRowsToText(stacks.recommended?.rebound || []);
+      document.getElementById('stackNotes').textContent = (stacks.notes || []).join(' ');
+    }
+
+    function resetLockedOutputs(){
+      document.getElementById('stackInputComp').textContent = 'Locked until payment';
+      document.getElementById('stackRecComp').textContent = 'Locked until payment';
+      document.getElementById('stackInputReb').textContent = 'Locked until payment';
+      document.getElementById('stackRecReb').textContent = 'Locked until payment';
+      document.getElementById('stackNotes').textContent = 'Complete payment to reveal calculated recommendations.';
+      document.getElementById('compZeta').textContent = '-';
+      document.getElementById('rebZeta').textContent = '-';
+      document.getElementById('portArea').textContent = '-';
+      document.getElementById('cavMargin').textContent = '-';
+    }
+
+    async function loadPayPalSdk(clientId){
+      if (window.paypal) return;
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=USD&intent=capture`;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    async function loadPublicConfig(){
+      const res = await fetch('/api/public-config');
+      const cfg = await res.json();
+      paymentState.enabled = !!cfg.payment_enabled;
+      paymentState.bypass = !!cfg.payment_bypass;
+      paymentState.paypalClientId = cfg.paypal_client_id || '';
+      if (paymentState.bypass){
+        paymentState.paid = true;
+        setLocked(false);
+        setPaymentStatus('Payment bypass mode is enabled on server.', 'ok');
+        return;
+      }
+      if (!paymentState.enabled){
+        paymentState.paid = false;
+        setLocked(true);
+        resetLockedOutputs();
+        setPaymentStatus('Payment gateway not configured by admin (missing PayPal secret).', 'err');
+        return;
+      }
+      setPaymentStatus('Ready: pay USD $100.00 to unlock calculations.');
+      await loadPayPalSdk(paymentState.paypalClientId);
+      renderPayPalButtons();
+    }
+
+    function renderPayPalButtons(){
+      if (!window.paypal || !paymentState.enabled || paymentState.bypass) return;
+      const container = document.getElementById('paypalButtons');
+      container.innerHTML = '';
+      window.paypal.Buttons({
+        style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal' },
+        createOrder: async () => {
+          setPaymentStatus('Creating PayPal order...');
+          const res = await fetch('/api/payment/create-order', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({customer_reference: `shim-${Date.now()}`})
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to create order');
+          paymentState.pendingToken = data.payment_token;
+          paymentState.pendingOrderId = data.order_id;
+          setPaymentStatus('Order created. Complete PayPal checkout.');
+          return data.order_id;
+        },
+        onApprove: async (data) => {
+          setPaymentStatus('Capturing payment...');
+          const token = paymentState.pendingToken;
+          const res = await fetch('/api/payment/capture-order', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({order_id: data.orderID, payment_token: token})
+          });
+          const cap = await res.json();
+          if (!res.ok) throw new Error(cap.error || 'Capture failed');
+          paymentState.paid = true;
+          paymentState.paymentToken = cap.payment_token;
+          localStorage.setItem('shimstackor_payment_token', paymentState.paymentToken);
+          setLocked(false);
+          setPaymentStatus('Payment received. Calculations unlocked.', 'ok');
+          simulate();
+        },
+        onError: (err) => {
+          console.error(err);
+          setPaymentStatus('PayPal checkout failed. Please try again.', 'err');
+        },
+        onCancel: () => {
+          setPaymentStatus('Payment was cancelled.');
+        }
+      }).render('#paypalButtons');
+    }
 
     function parseStack(text){
       return text.trim().split(/\n+/).filter(Boolean).map(line=>{
@@ -258,6 +451,7 @@
       for (const id of selectIds){ p[id] = document.getElementById(id).value; }
       p.include_base_valve = document.getElementById('include_base_valve').checked;
       p.include_mid_valve = document.getElementById('include_mid_valve').checked;
+      p.payment_token = paymentState.paymentToken || null;
       p.compression_stack = parseStack(document.getElementById('compression_stack').value);
       p.rebound_stack = parseStack(document.getElementById('rebound_stack').value);
       p.base_valve_stack = parseStack(document.getElementById('base_valve_stack').value);
@@ -353,15 +547,34 @@
     }
 
     async function simulate(){
+      if (!paymentState.paid && !paymentState.bypass){
+        setLocked(true);
+        setPaymentStatus('Complete USD $100.00 PayPal payment to unlock calculations.', 'err');
+        return;
+      }
       const btn = document.getElementById('simulateBtn');
       btn.disabled = true; btn.textContent = 'Running...';
       try{
         const res = await fetch('/api/simulate', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payloadFromForm())});
         const data = await res.json();
+        if (!res.ok){
+          if (res.status === 402){
+            paymentState.paid = false;
+            setLocked(true);
+            resetLockedOutputs();
+            localStorage.removeItem('shimstackor_payment_token');
+            paymentState.paymentToken = '';
+            setPaymentStatus(data.error || 'Payment required to unlock.', 'err');
+            return;
+          }
+          throw new Error(data.error || 'Simulation failed');
+        }
+        setLocked(false);
         renderCharts(data);
         updateSummary(data);
+        updateStackTables(data.stacks);
       }catch(err){
-        alert('Simulation failed. Check stack and numeric inputs.');
+        alert(String(err.message || err));
         console.error(err);
       }finally{
         btn.disabled = false; btn.textContent = 'Run simulation';
@@ -402,13 +615,30 @@
       document.getElementById('rebound_stack').value = '22,0.15,6\n20,0.15,2\n18,0.10,1';
       document.getElementById('base_valve_stack').value = '22,0.15,4\n20,0.15,2';
       document.getElementById('mid_valve_stack').value = '20,0.10,3\n18,0.10,2';
-      simulate();
+      if (paymentState.paid || paymentState.bypass) simulate();
+    }
+
+    async function initApp(){
+      const savedToken = localStorage.getItem('shimstackor_payment_token');
+      if (savedToken){
+        paymentState.paymentToken = savedToken;
+        paymentState.paid = true;
+      }
+      try{
+        await loadPublicConfig();
+      }catch(err){
+        console.error(err);
+        setPaymentStatus('Failed to load payment config.', 'err');
+      }
+      if (paymentState.paid || paymentState.bypass) setLocked(false);
+      else resetLockedOutputs();
+      loadDemo();
     }
 
     document.getElementById('simulateBtn').addEventListener('click', simulate);
     document.getElementById('demoBtn').addEventListener('click', loadDemo);
     document.getElementById('loadDynoBtn').addEventListener('click', loadDynoCsv);
-    loadDemo();
+    initApp();
   </script>
 </body>
 </html>

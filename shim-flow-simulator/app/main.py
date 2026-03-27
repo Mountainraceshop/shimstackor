@@ -2,11 +2,20 @@ from __future__ import annotations
 
 import csv
 import io
+import json
+import os
+import secrets
+import time
+from base64 import b64encode
 from math import exp, pi, sqrt
+from threading import Lock
 from typing import Literal
+from urllib import error as urlerror
+from urllib import parse as urlparse
+from urllib import request as urlrequest
 
 import numpy as np
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -20,6 +29,12 @@ STEEL_E = 210e9
 POISSON = 0.30
 DEFAULT_GAMMA = 1.4
 ATM_PA = 101325.0
+PAYMENT_AMOUNT_USD = "100.00"
+PAYMENT_CURRENCY = "USD"
+
+PAYMENT_LOCK = Lock()
+PENDING_PAYMENTS: dict[str, dict] = {}
+PAID_PAYMENTS: dict[str, dict] = {}
 
 
 class Shim(BaseModel):
@@ -85,6 +100,7 @@ class SimulationInput(BaseModel):
 
     shaft_velocity_max_m_s: float = Field(1.0, gt=0.05, le=5)
     steps: int = Field(41, ge=11, le=401)
+    payment_token: str | None = None
     compression_stack: list[Shim] = Field(
         default_factory=lambda: [
             Shim(diameter_mm=24, thickness_mm=0.15, qty=6),
@@ -115,6 +131,15 @@ class SimulationInput(BaseModel):
 
 class DynoCsvInput(BaseModel):
     csv_text: str = Field(..., min_length=5)
+
+
+class CreateOrderRequest(BaseModel):
+    customer_reference: str | None = None
+
+
+class CaptureOrderRequest(BaseModel):
+    order_id: str = Field(..., min_length=5)
+    payment_token: str = Field(..., min_length=8)
 
 
 class ValveStage(BaseModel):
@@ -577,9 +602,313 @@ def parse_dyno_csv(csv_text: str) -> dict:
     }
 
 
+def payment_gate_bypass() -> bool:
+    return os.getenv("SIMULATOR_BYPASS_PAYMENT", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def paypal_settings() -> dict:
+    client_id = os.getenv("PAYPAL_CLIENT_ID", "").strip()
+    client_secret = os.getenv("PAYPAL_CLIENT_SECRET", "").strip()
+    api_base = os.getenv("PAYPAL_API_BASE", "https://api-m.sandbox.paypal.com").strip().rstrip("/")
+    return {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "api_base": api_base,
+        "enabled": bool(client_id and client_secret),
+    }
+
+
+def _http_json(method: str, url: str, headers: dict[str, str], payload: dict | None = None) -> dict:
+    data = None
+    req_headers = dict(headers)
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        req_headers["Content-Type"] = "application/json"
+    req = urlrequest.Request(url, data=data, headers=req_headers, method=method)
+    try:
+        with urlrequest.urlopen(req, timeout=20) as resp:
+            body = resp.read().decode("utf-8")
+            return json.loads(body) if body else {}
+    except urlerror.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(f"PayPal HTTP {exc.code}: {detail}") from exc
+    except urlerror.URLError as exc:
+        raise RuntimeError(f"PayPal connection error: {exc.reason}") from exc
+
+
+def paypal_access_token(settings: dict) -> str:
+    creds = f"{settings['client_id']}:{settings['client_secret']}".encode("utf-8")
+    auth = b64encode(creds).decode("ascii")
+    form_data = urlparse.urlencode({"grant_type": "client_credentials"}).encode("utf-8")
+    req = urlrequest.Request(
+        f"{settings['api_base']}/v1/oauth2/token",
+        data=form_data,
+        headers={
+            "Authorization": f"Basic {auth}",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlrequest.urlopen(req, timeout=20) as resp:
+            raw = resp.read().decode("utf-8")
+            body = json.loads(raw)
+            token = body.get("access_token", "")
+            if not token:
+                raise RuntimeError("PayPal token response did not include an access token.")
+            return token
+    except urlerror.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(f"PayPal token request failed ({exc.code}): {detail}") from exc
+    except urlerror.URLError as exc:
+        raise RuntimeError(f"PayPal token request connection error: {exc.reason}") from exc
+
+
+def cleanup_payment_state(max_age_sec: int = 24 * 3600) -> None:
+    now = time.time()
+    with PAYMENT_LOCK:
+        stale_pending = [k for k, v in PENDING_PAYMENTS.items() if now - v["created_at"] > max_age_sec]
+        stale_paid = [k for k, v in PAID_PAYMENTS.items() if now - v["created_at"] > max_age_sec]
+        for key in stale_pending:
+            PENDING_PAYMENTS.pop(key, None)
+        for key in stale_paid:
+            PAID_PAYMENTS.pop(key, None)
+
+
+def register_pending_payment(order_id: str) -> str:
+    token = secrets.token_urlsafe(24)
+    with PAYMENT_LOCK:
+        PENDING_PAYMENTS[token] = {
+            "order_id": order_id,
+            "created_at": time.time(),
+        }
+    return token
+
+
+def payment_is_paid(payment_token: str | None) -> bool:
+    if not payment_token:
+        return False
+    with PAYMENT_LOCK:
+        paid = PAID_PAYMENTS.get(payment_token)
+        return bool(paid and paid.get("remaining_uses", 0) > 0)
+
+
+def mark_payment_paid(payment_token: str, order_id: str, capture_id: str) -> None:
+    with PAYMENT_LOCK:
+        pending = PENDING_PAYMENTS.pop(payment_token, None)
+        created_at = pending["created_at"] if pending else time.time()
+        PAID_PAYMENTS[payment_token] = {
+            "order_id": order_id,
+            "capture_id": capture_id,
+            "created_at": created_at,
+            "remaining_uses": 1,
+        }
+
+
+def get_pending_payment(payment_token: str) -> dict | None:
+    with PAYMENT_LOCK:
+        return PENDING_PAYMENTS.get(payment_token)
+
+
+def consume_paid_token(payment_token: str) -> int:
+    with PAYMENT_LOCK:
+        paid = PAID_PAYMENTS.get(payment_token)
+        if not paid:
+            return 0
+        remaining = int(paid.get("remaining_uses", 0))
+        if remaining <= 0:
+            return 0
+        remaining -= 1
+        paid["remaining_uses"] = remaining
+        return remaining
+
+
+def create_paypal_order(settings: dict, customer_reference: str | None = None) -> dict:
+    access_token = paypal_access_token(settings)
+    payload = {
+        "intent": "CAPTURE",
+        "purchase_units": [
+            {
+                "amount": {
+                    "currency_code": PAYMENT_CURRENCY,
+                    "value": PAYMENT_AMOUNT_USD,
+                },
+                "description": "Shim Calculator Engineering single analysis unlock",
+            }
+        ],
+        "application_context": {
+            "shipping_preference": "NO_SHIPPING",
+            "user_action": "PAY_NOW",
+        },
+    }
+    if customer_reference:
+        payload["purchase_units"][0]["custom_id"] = customer_reference[:127]
+    return _http_json(
+        "POST",
+        f"{settings['api_base']}/v2/checkout/orders",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        },
+        payload=payload,
+    )
+
+
+def capture_paypal_order(settings: dict, order_id: str) -> dict:
+    access_token = paypal_access_token(settings)
+    return _http_json(
+        "POST",
+        f"{settings['api_base']}/v2/checkout/orders/{order_id}/capture",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        },
+        payload={},
+    )
+
+
+def validate_capture_result(capture_response: dict) -> tuple[bool, str]:
+    if capture_response.get("status") != "COMPLETED":
+        return False, "PayPal order was not completed."
+    purchase_units = capture_response.get("purchase_units") or []
+    if not purchase_units:
+        return False, "PayPal capture did not include purchase units."
+    captures = (((purchase_units[0] or {}).get("payments") or {}).get("captures")) or []
+    if not captures:
+        return False, "PayPal capture payload did not include captures."
+    capture = captures[0] or {}
+    amount = capture.get("amount") or {}
+    if capture.get("status") != "COMPLETED":
+        return False, "PayPal capture status is not COMPLETED."
+    if amount.get("currency_code") != PAYMENT_CURRENCY or amount.get("value") != PAYMENT_AMOUNT_USD:
+        return False, "Payment amount mismatch."
+    capture_id = capture.get("id") or ""
+    if not capture_id:
+        return False, "Missing capture ID in PayPal response."
+    return True, capture_id
+
+
+def stack_to_rows(stack: list[Shim]) -> list[dict]:
+    return [
+        {
+            "diameter_mm": s.diameter_mm,
+            "thickness_mm": s.thickness_mm,
+            "qty": s.qty,
+        }
+        for s in stack
+    ]
+
+
+def recommended_stack(stack: list[Shim], direction: str, zeta: float) -> tuple[list[dict], str]:
+    target = 0.32 if direction == "compression" else 0.75
+    delta = zeta - target
+    note = f"{direction.title()} zeta near target."
+    if not stack:
+        return [], "No input stack provided."
+
+    rec = [
+        {
+            "diameter_mm": s.diameter_mm,
+            "thickness_mm": s.thickness_mm,
+            "qty": s.qty,
+        }
+        for s in stack
+    ]
+
+    if delta > 0.08:
+        rec[0]["qty"] = max(1, rec[0]["qty"] - 1)
+        note = f"{direction.title()} damping appears high; reduce top shim quantity by 1."
+    elif delta < -0.08:
+        rec[0]["qty"] = min(20, rec[0]["qty"] + 1)
+        note = f"{direction.title()} damping appears low; increase top shim quantity by 1."
+    return rec, note
+
+
 @app.get("/")
 def root() -> FileResponse:
     return FileResponse("app/static/index.html")
+
+
+@app.get("/api/public-config")
+def public_config() -> JSONResponse:
+    settings = paypal_settings()
+    return JSONResponse(
+        {
+            "paypal_client_id": settings["client_id"],
+            "payment_amount_usd": PAYMENT_AMOUNT_USD,
+            "payment_currency": PAYMENT_CURRENCY,
+            "payment_enabled": settings["enabled"],
+            "payment_bypass": payment_gate_bypass(),
+        }
+    )
+
+
+@app.post("/api/payment/create-order")
+def payment_create_order(req: CreateOrderRequest) -> JSONResponse:
+    cleanup_payment_state()
+    settings = paypal_settings()
+    if payment_gate_bypass():
+        token = register_pending_payment("BYPASS_ORDER")
+        mark_payment_paid(token, "BYPASS_ORDER", "BYPASS_CAPTURE")
+        return JSONResponse(
+            {
+                "order_id": "BYPASS_ORDER",
+                "payment_token": token,
+                "currency": PAYMENT_CURRENCY,
+                "amount": PAYMENT_AMOUNT_USD,
+                "bypass": True,
+            }
+        )
+    if not settings["enabled"]:
+        return JSONResponse({"error": "PayPal is not configured on the server."}, status_code=503)
+    try:
+        created = create_paypal_order(settings, req.customer_reference)
+    except RuntimeError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=502)
+
+    order_id = str(created.get("id") or "")
+    if not order_id:
+        return JSONResponse({"error": "PayPal order ID missing from response."}, status_code=502)
+
+    payment_token = register_pending_payment(order_id)
+    return JSONResponse(
+        {
+            "order_id": order_id,
+            "payment_token": payment_token,
+            "currency": PAYMENT_CURRENCY,
+            "amount": PAYMENT_AMOUNT_USD,
+            "bypass": False,
+        }
+    )
+
+
+@app.post("/api/payment/capture-order")
+def payment_capture_order(req: CaptureOrderRequest) -> JSONResponse:
+    cleanup_payment_state()
+    settings = paypal_settings()
+    if payment_gate_bypass():
+        mark_payment_paid(req.payment_token, req.order_id, "BYPASS_CAPTURE")
+        return JSONResponse({"paid": True, "payment_token": req.payment_token, "capture_id": "BYPASS_CAPTURE"})
+
+    pending = get_pending_payment(req.payment_token)
+    if not pending:
+        return JSONResponse({"error": "Unknown or expired payment token."}, status_code=400)
+    if pending["order_id"] != req.order_id:
+        return JSONResponse({"error": "Order ID does not match pending payment token."}, status_code=400)
+    if not settings["enabled"]:
+        return JSONResponse({"error": "PayPal is not configured on the server."}, status_code=503)
+    try:
+        capture_resp = capture_paypal_order(settings, req.order_id)
+    except RuntimeError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=502)
+
+    valid, capture_or_error = validate_capture_result(capture_resp)
+    if not valid:
+        return JSONResponse({"error": capture_or_error}, status_code=400)
+
+    mark_payment_paid(req.payment_token, req.order_id, capture_or_error)
+    return JSONResponse({"paid": True, "payment_token": req.payment_token, "capture_id": capture_or_error})
 
 
 @app.post("/api/parse-dyno-csv")
@@ -592,6 +921,17 @@ def parse_dyno(req: DynoCsvInput) -> JSONResponse:
 
 @app.post("/api/simulate")
 def simulate(inp: SimulationInput) -> JSONResponse:
+    if not payment_gate_bypass() and not payment_is_paid(inp.payment_token):
+        return JSONResponse(
+            {
+                "error": "Payment required. Complete USD 100.00 PayPal payment to unlock calculations.",
+                "payment_required": True,
+                "amount": PAYMENT_AMOUNT_USD,
+                "currency": PAYMENT_CURRENCY,
+            },
+            status_code=402,
+        )
+
     velocities = np.linspace(0.01, inp.shaft_velocity_max_m_s, inp.steps)
     compression = [solve_velocity_point(inp, float(v), "compression") for v in velocities]
     rebound = [solve_velocity_point(inp, float(v), "rebound") for v in velocities]
@@ -602,6 +942,8 @@ def simulate(inp: SimulationInput) -> JSONResponse:
     ratios = damping_ratio_estimate(inp, comp_force_03, reb_force_03)
 
     comp_03 = min(compression, key=lambda x: abs(x["velocity_m_s"] - 0.3))
+    comp_rec, comp_note = recommended_stack(inp.compression_stack, "compression", ratios["compression_zeta"])
+    reb_rec, reb_note = recommended_stack(inp.rebound_stack, "rebound", ratios["rebound_zeta"])
     result = {
         "summary": {
             "machine_type": resolved_machine_type(inp),
@@ -618,6 +960,17 @@ def simulate(inp: SimulationInput) -> JSONResponse:
             "reservoir_pressure_bar_abs_at_probe": comp_03["reservoir_pressure_bar_abs"],
             "cavitation_margin_bar_at_03": comp_03["cavitation_margin_bar"],
             **ratios,
+        },
+        "stacks": {
+            "input": {
+                "compression": stack_to_rows(inp.compression_stack),
+                "rebound": stack_to_rows(inp.rebound_stack),
+            },
+            "recommended": {
+                "compression": comp_rec,
+                "rebound": reb_rec,
+            },
+            "notes": [comp_note, reb_note],
         },
         "compression": compression,
         "rebound": rebound,
