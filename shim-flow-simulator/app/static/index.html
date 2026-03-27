@@ -94,6 +94,10 @@
     .preset-row button{width:auto;white-space:nowrap;padding:9px 12px}
     .preset-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
     .preset-actions button{padding:9px 12px}
+    .crossover-intensity{margin-top:8px;padding:8px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(0,0,0,.12)}
+    .crossover-intensity label{margin-bottom:6px}
+    .crossover-intensity .row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+    .crossover-intensity .value{font-size:12px;color:#cfe0ff;min-width:88px;text-align:right}
     .ab-compare-tag{
       margin-top:8px;font-size:12px;color:#cfe0ff;background:rgba(88,166,255,.14);
       border:1px solid rgba(88,166,255,.26);border-radius:9px;padding:8px 10px;display:none
@@ -243,6 +247,14 @@
           <div class="preset-actions">
             <button id="captureAbBtn" type="button">Capture A baseline</button>
             <button id="clearAbBtn" type="button">Clear A/B compare</button>
+          </div>
+          <div class="crossover-intensity">
+            <label for="crossoverIntensity">Crossover intensity (preset assist)</label>
+            <div class="row">
+              <input id="crossoverIntensity" type="range" min="0" max="100" step="10" value="50">
+              <div id="crossoverIntensityValue" class="value">Medium (50%)</div>
+            </div>
+            <div class="note" style="margin-top:6px">Applies to crossover-capable presets (enduro fork/shock). Lower = softer crossover, higher = firmer crossover.</div>
           </div>
           <div id="abCompareTag" class="ab-compare-tag">A/B compare inactive</div>
         </div>
@@ -517,6 +529,8 @@
       kyb_sss_enduro_fork_crossover: 'KYB SSS Enduro fork (crossover)',
       kyb_enduro_shock_crossover: 'KYB Enduro shock (crossover)',
     };
+    const CROSSOVER_PRESETS = new Set(['kyb_sss_enduro_fork_crossover', 'kyb_enduro_shock_crossover']);
+    const CROSSOVER_SCALE = { min: 0.70, max: 1.35 };
     const paymentState = {
       enabled: false,
       bypass: false,
@@ -1239,6 +1253,50 @@
       }
     }
 
+    function crossoverIntensityValue(){
+      return Number(document.getElementById('crossoverIntensity')?.value || 50);
+    }
+
+    function updateCrossoverIntensityLabel(){
+      const value = crossoverIntensityValue();
+      let tone = 'Medium';
+      if (value <= 30) tone = 'Soft';
+      else if (value >= 70) tone = 'Firm';
+      const el = document.getElementById('crossoverIntensityValue');
+      if (el) el.textContent = `${tone} (${value}%)`;
+    }
+
+    function parseStackRows(textValue){
+      return String(textValue || '').trim().split(/\n+/).filter(Boolean).map((line) => {
+        const [diameter, thickness, qty] = line.split(',').map(v => Number(String(v).trim()));
+        return { diameter, thickness, qty };
+      });
+    }
+
+    function formatStackRows(rows){
+      return rows.map(r => `${r.diameter.toFixed(0)},${r.thickness.toFixed(2)},${Math.max(1, Math.round(r.qty))}`).join('\n');
+    }
+
+    function applyCrossoverIntensity(stacks, presetName){
+      if (!CROSSOVER_PRESETS.has(presetName)) return stacks;
+      const pct = crossoverIntensityValue() / 100;
+      const factor = CROSSOVER_SCALE.min + (CROSSOVER_SCALE.max - CROSSOVER_SCALE.min) * pct;
+      const out = {...stacks};
+      for (const [k, v] of Object.entries(stacks || {})){
+        const rows = parseStackRows(v);
+        if (rows.length < 3){
+          out[k] = v;
+          continue;
+        }
+        const startIdx = Math.max(1, rows.length - 2);
+        for (let i = startIdx; i < rows.length; i += 1){
+          rows[i].qty = Math.max(1, Math.round(rows[i].qty * factor));
+        }
+        out[k] = formatStackRows(rows);
+      }
+      return out;
+    }
+
     function loadDemo(){
       setFormValues({
         mode: 'fork',
@@ -1375,9 +1433,10 @@
       const profile = profiles[name];
       if (!profile) return;
 
+      const adjustedStacks = applyCrossoverIntensity(profile.stacks || {}, name);
       setFormValues({
         ...(profile.values || {}),
-        ...(profile.stacks || {}),
+        ...adjustedStacks,
         presetSelect: name,
       });
       updateModeVisibility();
@@ -1401,6 +1460,7 @@
       if (paymentState.paid || paymentState.bypass) setLocked(false);
       else resetLockedOutputs();
       loadDemo();
+      updateCrossoverIntensityLabel();
       updateHelpFabState();
       updateAbCompareTag();
       const sawChoice = localStorage.getItem(INTRO_CHOICE_STORAGE_KEY) === '1';
@@ -1469,6 +1529,14 @@
     });
     document.getElementById('clearAbBtn').addEventListener('click', () => {
       clearAbBaseline();
+    });
+    document.getElementById('crossoverIntensity').addEventListener('input', () => {
+      updateCrossoverIntensityLabel();
+      const preset = document.getElementById('presetSelect').value;
+      if (CROSSOVER_PRESETS.has(preset)){
+        applyPreset(preset);
+        if (paymentState.paid || paymentState.bypass) simulate();
+      }
     });
     document.getElementById('helpTourFab').addEventListener('click', () => {
       endIntroTour(false);
