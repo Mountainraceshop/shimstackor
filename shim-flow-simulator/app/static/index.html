@@ -71,6 +71,35 @@
     .stack-box pre{margin:6px 0 0;white-space:pre-wrap;font-size:11px;line-height:1.35;color:#d7e6ff}
     .chart{height:250px}
     .charts{display:grid;gap:16px;margin-top:16px}
+    .ghost-btn{
+      width:auto;padding:7px 10px;border-radius:999px;background:rgba(0,0,0,.2);
+      border:1px solid rgba(255,255,255,.22);font-size:12px;font-weight:600;color:#dce9ff
+    }
+    .ghost-btn:hover{background:rgba(88,166,255,.15)}
+    .intro-overlay{
+      position:fixed;inset:0;z-index:12000;display:none;align-items:flex-end;justify-content:center;
+      padding:24px;background:linear-gradient(180deg,rgba(5,9,18,.35),rgba(5,9,18,.8));
+      backdrop-filter:blur(2px)
+    }
+    .intro-overlay.active{display:flex}
+    .intro-highlight{
+      position:fixed;display:none;border:2px solid rgba(88,166,255,.95);border-radius:14px;
+      box-shadow:0 0 0 9999px rgba(3,7,14,.62), 0 0 0 4px rgba(88,166,255,.18), 0 0 24px rgba(88,166,255,.45);
+      pointer-events:none;transition:all .28s ease
+    }
+    .intro-card{
+      width:min(760px,96vw);border-radius:16px;border:1px solid rgba(255,255,255,.18);
+      background:linear-gradient(180deg,#10213c,#0d1b31);padding:16px;position:relative;z-index:2
+    }
+    .intro-title{margin:2px 0 6px;font-size:21px}
+    .intro-text{margin:0;color:#d5e5ff;line-height:1.5}
+    .intro-progress{height:7px;border-radius:999px;background:rgba(255,255,255,.14);margin-top:12px;overflow:hidden}
+    .intro-progress>span{display:block;height:100%;width:0;background:linear-gradient(90deg,#32b6ff,#7be2ff);transition:width .1s linear}
+    .intro-step-meta{margin-top:8px;font-size:12px;color:var(--muted)}
+    .intro-actions{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px}
+    .intro-actions button{width:auto;padding:9px 14px}
+    .intro-actions .right{display:flex;gap:8px}
+    .intro-skip{background:transparent;border:1px solid rgba(255,255,255,.24)}
     @media (max-width:1320px){
       .grid{grid-template-columns:1fr}
       .charts{grid-template-columns:1fr}
@@ -85,7 +114,10 @@
         <h1 style="margin:0">Shim Calculator Engineering</h1>
         <div class="sub">Engineering-grade shim-stack analysis for modern workshops, tuners, and race teams.</div>
       </div>
-      <div class="tag">Fork + Shock Professional Suite</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <div class="tag">Fork + Shock Professional Suite</div>
+        <button id="replayIntroBtn" class="ghost-btn" type="button">Replay quick tour</button>
+      </div>
     </div>
 
     <div class="card pane pitch">
@@ -118,7 +150,7 @@
     </div>
 
     <div class="grid">
-      <div class="card pane">
+      <div class="card pane" id="inputsCard">
         <h3 class="section">Inputs</h3>
         <div class="form-grid">
           <div><label>Machine</label><select id="mode"><option value="fork">Fork</option><option value="shock">Shock</option></select></div>
@@ -221,7 +253,7 @@
         </div>
         <div class="note">CSV must include headers with velocity and force columns. Direction column is optional.</div>
 
-        <div class="paywall">
+        <div class="paywall" id="paywallCard">
           <h4>Unlock Calculated Shim Stacks</h4>
           <div class="price">USD $100.00 / analysis</div>
           <div class="note" style="margin-top:0">Enter all setup details first, then complete payment to reveal calculated stacks and full engineering outputs.</div>
@@ -334,6 +366,24 @@
     </div>
   </div>
 
+  <div id="introOverlay" class="intro-overlay" aria-hidden="true">
+    <div id="introHighlight" class="intro-highlight"></div>
+    <div class="intro-card">
+      <div class="section" style="margin-bottom:4px">Guided simulation walkthrough</div>
+      <h3 id="introTitle" class="intro-title">Welcome to Shim Calculator Engineering</h3>
+      <p id="introText" class="intro-text">This quick tour introduces where to enter setup data, how the damper animation works, and where to read the key engineering outputs.</p>
+      <div class="intro-progress"><span id="introProgressFill"></span></div>
+      <div class="intro-step-meta" id="introStepMeta">Step 1 of 5</div>
+      <div class="intro-actions">
+        <button id="introSkipBtn" class="intro-skip" type="button">Skip tour</button>
+        <div class="right">
+          <button id="introNextBtn" type="button">Next</button>
+          <button id="introDoneBtn" type="button" style="display:none">Start simulation</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     let dynoOverlay = {compression: [], rebound: []};
     const paymentState = {
@@ -344,6 +394,43 @@
       paypalClientId: '',
       pendingToken: '',
       pendingOrderId: '',
+    };
+    const INTRO_STORAGE_KEY = 'shimstackor_intro_seen_v1';
+    const INTRO_STEP_MS = 5400;
+    const introSteps = [
+      {
+        target: '#inputsCard',
+        title: 'Enter all suspension setup details',
+        text: 'Input geometry, ports, clickers, spring, oil, air-chamber and chassis dimensions. You can use Load demo for an instant baseline.'
+      },
+      {
+        target: '#paywallCard',
+        title: 'Customer enters details before payment',
+        text: 'The full setup can be entered first. PayPal unlocks calculated shim stacks and full engineering output for this analysis.'
+      },
+      {
+        target: '#vizLockable',
+        title: 'Live damper cutaway animation',
+        text: 'The center view animates piston position, shim lift, pressure response, and flow-path split using the simulation state.'
+      },
+      {
+        target: '#summaryLockable',
+        title: 'Engineering summary and stack detail',
+        text: 'Review zeta, cavitation margin, flow split, chassis indicators, AER outputs, and input vs recommended shim stacks.'
+      },
+      {
+        target: '#chartsLockable',
+        title: 'Force, pressure, lift, and spring curves',
+        text: 'Charts show the detail behind each recommendation and make it easy to explain decisions to customers and teams.'
+      }
+    ];
+    const introState = {
+      running: false,
+      stepIndex: 0,
+      autoTimer: null,
+      progressTimer: null,
+      demoTimer: null,
+      startedAt: 0,
     };
 
     function setPaymentStatus(message, kind=''){
@@ -386,6 +473,123 @@
       document.getElementById('aerEqRate').textContent = '-';
       document.getElementById('aerEqPreload').textContent = '-';
       document.getElementById('aerReqPsi').textContent = '-';
+    }
+
+    function clearIntroAutoplayTimers(){
+      if (introState.autoTimer) window.clearTimeout(introState.autoTimer);
+      if (introState.progressTimer) window.clearInterval(introState.progressTimer);
+      introState.autoTimer = null;
+      introState.progressTimer = null;
+    }
+
+    function stopIntroDemoAnimation(){
+      if (introState.demoTimer) window.clearInterval(introState.demoTimer);
+      introState.demoTimer = null;
+    }
+
+    function startIntroDemoAnimation(){
+      stopIntroDemoAnimation();
+      let t = 0;
+      introState.demoTimer = window.setInterval(() => {
+        if (!introState.running) return;
+        t += 0.14;
+        const velocity = 0.06 + Math.abs(Math.sin(t * 1.65)) * 0.86;
+        const pressure = 4200 + velocity * 29000;
+        const shimLift = 0.03 + velocity * 0.24;
+        const flowMain = Math.min(96, 52 + velocity * 44);
+        updateAnimation({
+          velocity_m_s: velocity,
+          pressure_pa: pressure,
+          shim_lift_mm: shimLift,
+          flow_main_pct: flowMain,
+          flow_bypass_pct: Math.max(4, 100 - flowMain),
+        });
+      }, 120);
+    }
+
+    function setIntroHighlight(targetSelector){
+      const highlight = document.getElementById('introHighlight');
+      const overlay = document.getElementById('introOverlay');
+      if (!overlay.classList.contains('active')){
+        highlight.style.display = 'none';
+        return;
+      }
+      const target = document.querySelector(targetSelector);
+      if (!target){
+        highlight.style.display = 'none';
+        return;
+      }
+      const rect = target.getBoundingClientRect();
+      const pad = 8;
+      const left = Math.max(8, rect.left - pad);
+      const top = Math.max(8, rect.top - pad);
+      const width = Math.max(40, Math.min(window.innerWidth - left - 8, rect.width + pad * 2));
+      const height = Math.max(40, Math.min(window.innerHeight - top - 8, rect.height + pad * 2));
+      highlight.style.display = 'block';
+      highlight.style.left = `${left}px`;
+      highlight.style.top = `${top}px`;
+      highlight.style.width = `${width}px`;
+      highlight.style.height = `${height}px`;
+    }
+
+    function scheduleIntroAutoplay(){
+      clearIntroAutoplayTimers();
+      introState.startedAt = Date.now();
+      const fill = document.getElementById('introProgressFill');
+      fill.style.width = '0%';
+      introState.progressTimer = window.setInterval(() => {
+        if (!introState.running) return;
+        const elapsed = Date.now() - introState.startedAt;
+        const pct = Math.min(100, (elapsed / INTRO_STEP_MS) * 100);
+        fill.style.width = `${pct}%`;
+      }, 80);
+      introState.autoTimer = window.setTimeout(() => {
+        if (!introState.running) return;
+        if (introState.stepIndex >= introSteps.length - 1){
+          endIntroTour(true);
+          return;
+        }
+        introState.stepIndex += 1;
+        renderIntroStep();
+      }, INTRO_STEP_MS);
+    }
+
+    function renderIntroStep(){
+      const step = introSteps[introState.stepIndex];
+      document.getElementById('introTitle').textContent = step.title;
+      document.getElementById('introText').textContent = step.text;
+      document.getElementById('introStepMeta').textContent = `Step ${introState.stepIndex + 1} of ${introSteps.length}`;
+      document.getElementById('introNextBtn').style.display = introState.stepIndex < introSteps.length - 1 ? 'inline-flex' : 'none';
+      document.getElementById('introDoneBtn').style.display = introState.stepIndex >= introSteps.length - 1 ? 'inline-flex' : 'none';
+      const target = document.querySelector(step.target);
+      if (target) target.scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
+      window.setTimeout(() => setIntroHighlight(step.target), 240);
+      scheduleIntroAutoplay();
+    }
+
+    function endIntroTour(markAsSeen = true){
+      clearIntroAutoplayTimers();
+      stopIntroDemoAnimation();
+      introState.running = false;
+      const overlay = document.getElementById('introOverlay');
+      overlay.classList.remove('active');
+      overlay.setAttribute('aria-hidden', 'true');
+      document.getElementById('introHighlight').style.display = 'none';
+      if (markAsSeen){
+        localStorage.setItem(INTRO_STORAGE_KEY, '1');
+      }
+    }
+
+    function startIntroTour(force = false){
+      if (introState.running) return;
+      if (!force && localStorage.getItem(INTRO_STORAGE_KEY) === '1') return;
+      introState.running = true;
+      introState.stepIndex = 0;
+      const overlay = document.getElementById('introOverlay');
+      overlay.classList.add('active');
+      overlay.setAttribute('aria-hidden', 'false');
+      startIntroDemoAnimation();
+      renderIntroStep();
     }
 
     async function loadPayPalSdk(clientId){
@@ -726,8 +930,29 @@
       if (paymentState.paid || paymentState.bypass) setLocked(false);
       else resetLockedOutputs();
       loadDemo();
+      window.setTimeout(() => startIntroTour(false), 500);
     }
 
+    document.getElementById('introSkipBtn').addEventListener('click', () => endIntroTour(true));
+    document.getElementById('introNextBtn').addEventListener('click', () => {
+      if (!introState.running || introState.stepIndex >= introSteps.length - 1) return;
+      introState.stepIndex += 1;
+      renderIntroStep();
+    });
+    document.getElementById('introDoneBtn').addEventListener('click', () => endIntroTour(true));
+    document.getElementById('replayIntroBtn').addEventListener('click', () => {
+      endIntroTour(false);
+      startIntroTour(true);
+    });
+    window.addEventListener('resize', () => {
+      if (!introState.running) return;
+      setIntroHighlight(introSteps[introState.stepIndex].target);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && introState.running){
+        endIntroTour(true);
+      }
+    });
     document.getElementById('simulateBtn').addEventListener('click', simulate);
     document.getElementById('demoBtn').addEventListener('click', loadDemo);
     document.getElementById('loadDynoBtn').addEventListener('click', loadDynoCsv);
