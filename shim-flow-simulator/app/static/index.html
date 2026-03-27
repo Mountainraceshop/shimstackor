@@ -58,14 +58,25 @@
     .stage{height:390px;border-radius:16px;background:radial-gradient(circle at top,#17335d,#09111d 65%);position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
     .tube{position:absolute;left:50%;top:32px;transform:translateX(-50%);width:160px;height:330px;border:2px solid rgba(255,255,255,.27);border-radius:28px}
     .oil{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);width:148px;height:208px;background:linear-gradient(180deg,rgba(88,166,255,.2),rgba(88,166,255,.45));border-radius:0 0 24px 24px}
-    .shaft{position:absolute;left:50%;top:0;transform:translateX(-50%);width:28px;height:150px;border-radius:0 0 10px 10px;background:linear-gradient(180deg,#dbe3ef,#97aac7)}
+    .shaft{position:absolute;left:50%;top:8px;transform:translateX(-50%);width:24px;height:150px;border-radius:0 0 10px 10px;background:linear-gradient(180deg,#dbe3ef,#97aac7)}
     .piston{position:absolute;left:50%;transform:translateX(-50%);width:138px;height:20px;border-radius:14px;background:linear-gradient(180deg,#e7edf7,#98abc9)}
     .shim{position:absolute;left:50%;height:3px;background:#ffd166;border-radius:4px;transform-origin:center left}
+    .base-valve{position:absolute;left:50%;bottom:36px;transform:translateX(-50%);width:126px;height:18px;border-radius:10px;background:linear-gradient(180deg,#d4dde9,#7c93b2)}
+    .base-shim{position:absolute;left:50%;height:3px;background:#ffcf6f;border-radius:4px;transform-origin:center left}
+    .stage-label{
+      position:absolute;left:50%;transform:translateX(-50%);font-size:11px;color:#cfe0ff;
+      background:rgba(9,19,34,.7);padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.15)
+    }
+    .stage-label-top{top:38px}
+    .stage-label-bottom{bottom:12px}
     .flow{position:absolute;height:8px;border-radius:10px;background:linear-gradient(90deg,rgba(77,212,172,.35),rgba(77,212,172,.92));animation:f 1.2s linear infinite}
     @keyframes f{from{transform:translateX(-8px)}to{transform:translateX(8px)}}
     .metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
     .metric{padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(0,0,0,.12)}
     .k{font-size:12px;color:var(--muted)} .v{font-size:20px;font-weight:700;margin-top:6px}
+    .t{margin-top:4px;font-size:11px;color:#a8c6f2}
+    .v.target-ok{color:#66e0a3}
+    .v.target-warn{color:#ffd166}
     .table{width:100%;border-collapse:collapse;font-size:13px}
     .table td{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)}
     .stack-panels{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
@@ -391,14 +402,18 @@
               <div class="piston" id="piston"></div>
               <div class="shim" id="shim1" style="width:62px"></div>
               <div class="shim" id="shim2" style="width:54px"></div>
-              <div class="flow" id="flow1" style="left:calc(50% - 145px);top:175px;width:100px"></div>
-              <div class="flow" id="flow2" style="left:calc(50% + 45px);top:212px;width:90px"></div>
+              <div class="base-valve" id="baseValve"></div>
+              <div class="base-shim" id="baseShim" style="width:58px"></div>
+              <div class="flow" id="flow1" style="left:calc(50% - 145px);top:148px;width:100px"></div>
+              <div class="flow" id="flow2" style="left:calc(50% + 40px);top:326px;width:88px"></div>
+              <div class="stage-label stage-label-top">Cartridge top</div>
+              <div class="stage-label stage-label-bottom">Base valve</div>
             </div>
             <div class="metrics">
-              <div class="metric"><div class="k">Compression zeta</div><div class="v" id="compZeta">-</div></div>
-              <div class="metric"><div class="k">Rebound zeta</div><div class="v" id="rebZeta">-</div></div>
-              <div class="metric"><div class="k">Main port area mm2</div><div class="v" id="portArea">-</div></div>
-              <div class="metric"><div class="k">Cavitation margin bar</div><div class="v" id="cavMargin">-</div></div>
+              <div class="metric"><div class="k">Compression zeta</div><div class="v" id="compZeta">-</div><div class="t">Target 0.54</div></div>
+              <div class="metric"><div class="k">Rebound zeta</div><div class="v" id="rebZeta">-</div><div class="t">Target 0.39</div></div>
+              <div class="metric"><div class="k">Main port area mm2</div><div class="v" id="portArea">-</div><div class="t">Target 120.8 mm2</div></div>
+              <div class="metric"><div class="k">Cavitation margin bar</div><div class="v" id="cavMargin">-</div><div class="t">Target >= 1.00 bar</div></div>
             </div>
           </div>
         </div>
@@ -533,6 +548,7 @@
     };
     const CROSSOVER_PRESETS = new Set(['kyb_sss_enduro_fork_crossover', 'kyb_enduro_shock_crossover']);
     const CROSSOVER_SCALE = { min: 0.70, max: 1.35 };
+    const METRIC_TARGETS = { comp_zeta: 0.54, reb_zeta: 0.39, port_area_mm2: 120.8, cav_margin_bar_min: 1.0 };
     const paymentState = {
       enabled: false,
       bypass: false,
@@ -750,10 +766,11 @@
       document.getElementById('stackInputReb').textContent = 'Locked until payment';
       document.getElementById('stackRecReb').textContent = 'Locked until payment';
       document.getElementById('stackNotes').textContent = 'Complete payment to reveal calculated recommendations.';
-      document.getElementById('compZeta').textContent = '-';
-      document.getElementById('rebZeta').textContent = '-';
-      document.getElementById('portArea').textContent = '-';
-      document.getElementById('cavMargin').textContent = '-';
+      for (const id of ['compZeta','rebZeta','portArea','cavMargin']){
+        const el = document.getElementById(id);
+        el.textContent = '-';
+        el.classList.remove('target-ok','target-warn');
+      }
       document.getElementById('aerEqRate').textContent = '-';
       document.getElementById('aerEqPreload').textContent = '-';
       document.getElementById('aerReqPsi').textContent = '-';
@@ -1057,19 +1074,32 @@
       const oil = document.getElementById('oil');
       const shim1 = document.getElementById('shim1');
       const shim2 = document.getElementById('shim2');
+      const baseValve = document.getElementById('baseValve');
+      const baseShim = document.getElementById('baseShim');
       const flow1 = document.getElementById('flow1');
       const flow2 = document.getElementById('flow2');
-      const y = 135 + Math.min(Math.abs(point.velocity_m_s) * 135, 140);
+
+      const y = 96 + Math.min(Math.abs(point.velocity_m_s) * 112, 164);
       piston.style.top = y + 'px';
-      shaft.style.height = (y + 10) + 'px';
-      oil.style.height = (206 + Math.min(point.pressure_pa / 30000, 116)) + 'px';
-      const liftPx = Math.min(point.shim_lift_mm * 26, 18);
+      shaft.style.height = Math.max(78, y - 16) + 'px';
+      oil.style.height = (190 + Math.min(point.pressure_pa / 36000, 130)) + 'px';
+
+      const liftPx = Math.min(point.shim_lift_mm * 24, 16);
       shim1.style.top = (y - 4) + 'px';
-      shim2.style.top = (y) + 'px';
+      shim2.style.top = y + 'px';
       shim1.style.transform = `translateX(8px) rotate(${-liftPx}deg)`;
-      shim2.style.transform = `translateX(13px) rotate(${-liftPx * 0.75}deg)`;
-      flow1.style.width = (52 + point.flow_main_pct * 1.08) + 'px';
-      flow2.style.width = (28 + point.flow_bypass_pct * 0.85) + 'px';
+      shim2.style.transform = `translateX(13px) rotate(${-liftPx * 0.72}deg)`;
+
+      const baseLiftPx = Math.max(2, Math.min(liftPx * 0.58 + 1.5, 11));
+      baseValve.style.bottom = '36px';
+      baseShim.style.bottom = (53 + baseLiftPx * 0.25) + 'px';
+      baseShim.style.transform = `translateX(10px) rotate(${baseLiftPx}deg)`;
+
+      flow1.style.width = (50 + point.flow_main_pct * 1.1) + 'px';
+      flow2.style.width = (28 + point.flow_bypass_pct * 0.9) + 'px';
+      flow1.style.top = (y + 12) + 'px';
+      flow2.style.top = (312 + Math.min(baseLiftPx * 1.4, 16)) + 'px';
+
       document.getElementById('velocityTag').textContent = `${Math.abs(point.velocity_m_s).toFixed(2)} m/s focus`;
     }
 
@@ -1144,6 +1174,27 @@
       Plotly.newPlot('forceChart', forceTraces, baseLayout('Force vs shaft velocity', 'Velocity (m/s)', 'Force (N)'));
     }
 
+    function updateTargetBadges(comp03, summary){
+      const compEl = document.getElementById('compZeta');
+      const rebEl = document.getElementById('rebZeta');
+      const portEl = document.getElementById('portArea');
+      const cavEl = document.getElementById('cavMargin');
+
+      const compOk = Math.abs(summary.compression_zeta - METRIC_TARGETS.comp_zeta) <= 0.08;
+      const rebOk = Math.abs(summary.rebound_zeta - METRIC_TARGETS.reb_zeta) <= 0.08;
+      const portOk = Math.abs(summary.total_port_area_mm2 - METRIC_TARGETS.port_area_mm2) <= 8.0;
+      const cavOk = comp03.cavitation_margin_bar >= METRIC_TARGETS.cav_margin_bar_min;
+
+      compEl.classList.toggle('target-ok', compOk);
+      compEl.classList.toggle('target-warn', !compOk);
+      rebEl.classList.toggle('target-ok', rebOk);
+      rebEl.classList.toggle('target-warn', !rebOk);
+      portEl.classList.toggle('target-ok', portOk);
+      portEl.classList.toggle('target-warn', !portOk);
+      cavEl.classList.toggle('target-ok', cavOk);
+      cavEl.classList.toggle('target-warn', !cavOk);
+    }
+
     function updateSummary(data){
       const comp03 = nearestByAbs(data.compression, p=>p.velocity_m_s - 0.3);
       const reb03 = nearestByAbs(data.rebound, p=>Math.abs(p.velocity_m_s) - 0.3);
@@ -1154,6 +1205,7 @@
       document.getElementById('rebZeta').textContent = data.summary.rebound_zeta.toFixed(2);
       document.getElementById('portArea').textContent = data.summary.total_port_area_mm2.toFixed(1);
       document.getElementById('cavMargin').textContent = comp03.cavitation_margin_bar.toFixed(2);
+      updateTargetBadges(comp03, data.summary);
       document.getElementById('sumPlatform').textContent = machine;
       document.getElementById('sumPortArea').textContent = data.summary.total_port_area_mm2.toFixed(1) + ' mm2';
       document.getElementById('sumBaseMid').textContent = data.summary.base_port_area_mm2.toFixed(1) + ' / ' + data.summary.mid_port_area_mm2.toFixed(1) + ' mm2';
