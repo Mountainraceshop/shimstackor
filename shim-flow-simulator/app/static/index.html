@@ -1015,6 +1015,9 @@
     function clearAbBaseline(){
       abBaseline = null;
       updateAbCompareTag(latestSimulationData);
+      if (latestSimulationData){
+        renderCharts(latestSimulationData);
+      }
     }
 
     function captureBaselineForAb(){
@@ -1066,6 +1069,9 @@
       const r = data.rebound;
       const s = data.spring;
       const forceTraces = [];
+      const pressureTraces = [];
+      const liftTraces = [];
+      const springTraces = [];
 
       if (abBaseline?.data){
         const ac = abBaseline.data.compression || [];
@@ -1075,43 +1081,39 @@
           {x:ar.map(p=>p.velocity_m_s), y:ar.map(p=>p.force_n), mode:'lines', name:`A baseline rebound (${abBaseline.label})`, line:{dash:'dot', color:'#ffd166'}},
           {x:ac.map(p=>p.velocity_m_s), y:ac.map(p=>p.force_n), mode:'lines', name:`A baseline compression (${abBaseline.label})`, line:{dash:'dot', color:'#ffe29a'}}
         );
-        Plotly.newPlot('pressureChart', [
+        pressureTraces.push(
           {x:ac.map(p=>p.velocity_m_s), y:ac.map(p=>p.pressure_pa/1e5), mode:'lines', name:'A baseline comp', line:{dash:'dot', color:'#ffd166'}},
-          {x:ar.map(p=>Math.abs(p.velocity_m_s)), y:ar.map(p=>p.pressure_pa/1e5), mode:'lines', name:'A baseline reb', line:{dash:'dot', color:'#ffe29a'}},
-          {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Compression'},
-          {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Rebound'}
-        ], baseLayout('Valve pressure drop', '|Velocity| (m/s)', 'DeltaP (bar)'));
+          {x:ar.map(p=>Math.abs(p.velocity_m_s)), y:ar.map(p=>p.pressure_pa/1e5), mode:'lines', name:'A baseline reb', line:{dash:'dot', color:'#ffe29a'}}
+        );
 
-        Plotly.newPlot('liftChart', [
+        liftTraces.push(
           {x:ac.map(p=>p.velocity_m_s), y:ac.map(p=>p.shim_lift_mm), mode:'lines', name:'A baseline comp lift', line:{dash:'dot', color:'#ffd166'}},
-          {x:ar.map(p=>Math.abs(p.velocity_m_s)), y:ar.map(p=>p.shim_lift_mm), mode:'lines', name:'A baseline reb lift', line:{dash:'dot', color:'#ffe29a'}},
-          {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston comp lift'},
-          {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston reb lift'}
-        ], baseLayout('Shim lift vs velocity', '|Velocity| (m/s)', 'Lift (mm)'));
+          {x:ar.map(p=>Math.abs(p.velocity_m_s)), y:ar.map(p=>p.shim_lift_mm), mode:'lines', name:'A baseline reb lift', line:{dash:'dot', color:'#ffe29a'}}
+        );
 
-        Plotly.newPlot('springChart', [
-          {x:as.map(p=>p.travel_mm), y:as.map(p=>p.combined_force_n), mode:'lines', name:`A baseline combined (${abBaseline.label})`, line:{dash:'dot', color:'#ffd166'}},
-          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.spring_force_n), mode:'lines', name:'Mechanical spring'},
-          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.air_force_n), mode:'lines', name:'Air/gas force'},
-          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.combined_force_n), mode:'lines', name:'Combined'}
-        ], baseLayout('Spring and chamber progression', 'Travel (mm)', 'Force (N)'));
-      } else {
-        Plotly.newPlot('pressureChart', [
-          {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Compression'},
-          {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Rebound'}
-        ], baseLayout('Valve pressure drop', '|Velocity| (m/s)', 'DeltaP (bar)'));
-
-        Plotly.newPlot('liftChart', [
-          {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston comp lift'},
-          {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston reb lift'}
-        ], baseLayout('Shim lift vs velocity', '|Velocity| (m/s)', 'Lift (mm)'));
-
-        Plotly.newPlot('springChart', [
-          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.spring_force_n), mode:'lines', name:'Mechanical spring'},
-          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.air_force_n), mode:'lines', name:'Air/gas force'},
-          {x:s.map(p=>p.travel_mm), y:s.map(p=>p.combined_force_n), mode:'lines', name:'Combined'}
-        ], baseLayout('Spring and chamber progression', 'Travel (mm)', 'Force (N)'));
+        springTraces.push(
+          {x:as.map(p=>p.travel_mm), y:as.map(p=>p.combined_force_n), mode:'lines', name:`A baseline combined (${abBaseline.label})`, line:{dash:'dot', color:'#ffd166'}}
+        );
       }
+
+      pressureTraces.push(
+        {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Compression'},
+        {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.pressure_pa/1e5), mode:'lines', name:'Rebound'}
+      );
+      Plotly.newPlot('pressureChart', pressureTraces, baseLayout('Valve pressure drop', '|Velocity| (m/s)', 'DeltaP (bar)'));
+
+      liftTraces.push(
+        {x:c.map(p=>p.velocity_m_s), y:c.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston comp lift'},
+        {x:r.map(p=>Math.abs(p.velocity_m_s)), y:r.map(p=>p.shim_lift_mm), mode:'lines', name:'Piston reb lift'}
+      );
+      Plotly.newPlot('liftChart', liftTraces, baseLayout('Shim lift vs velocity', '|Velocity| (m/s)', 'Lift (mm)'));
+
+      springTraces.push(
+        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.spring_force_n), mode:'lines', name:'Mechanical spring'},
+        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.air_force_n), mode:'lines', name:'Air/gas force'},
+        {x:s.map(p=>p.travel_mm), y:s.map(p=>p.combined_force_n), mode:'lines', name:'Combined'}
+      );
+      Plotly.newPlot('springChart', springTraces, baseLayout('Spring and chamber progression', 'Travel (mm)', 'Force (N)'));
 
       forceTraces.push(
         {x:r.map(p=>p.velocity_m_s), y:r.map(p=>p.force_n), mode:'lines', name:'Model rebound'},
