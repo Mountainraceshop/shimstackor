@@ -115,6 +115,14 @@
     .intro-choice-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px}
     .intro-choice-actions button{padding:11px 12px}
     .choice-secondary{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22)}
+    .help-fab{
+      position:fixed;right:18px;bottom:18px;z-index:11900;width:48px;height:48px;border-radius:999px;
+      display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;line-height:1;
+      color:#eef4ff;background:linear-gradient(180deg,#2283ff,#1561c7);border:1px solid rgba(255,255,255,.28);
+      box-shadow:0 10px 24px rgba(0,0,0,.36)
+    }
+    .help-fab:hover{filter:brightness(1.06)}
+    .help-fab:focus-visible{outline:2px solid #7be2ff;outline-offset:2px}
     @media (max-width:1320px){
       .grid{grid-template-columns:1fr}
       .charts{grid-template-columns:1fr}
@@ -414,6 +422,8 @@
       </div>
     </div>
   </div>
+
+  <button id="helpTourFab" class="help-fab" type="button" aria-label="Open walkthrough options" title="Walkthrough options">?</button>
 
   <script>
     let dynoOverlay = {compression: [], rebound: []};
@@ -1068,6 +1078,10 @@
       localStorage.setItem(INTRO_CHOICE_STORAGE_KEY, '1');
       localStorage.setItem(INTRO_STORAGE_KEY, '1');
       hideIntroChoiceOverlay();
+    });
+    document.getElementById('helpTourFab').addEventListener('click', () => {
+      endIntroTour(false);
+      showIntroChoiceOverlay();
     });
     window.addEventListener('resize', () => {
       if (!introState.running) return;
