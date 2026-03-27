@@ -121,12 +121,27 @@
       color:#eef4ff;background:linear-gradient(180deg,#2283ff,#1561c7);border:1px solid rgba(255,255,255,.28);
       box-shadow:0 10px 24px rgba(0,0,0,.36)
     }
+    .help-fab.pulse{animation:helpPulse 1.8s ease-out infinite}
+    @keyframes helpPulse{
+      0%{transform:scale(1);box-shadow:0 10px 24px rgba(0,0,0,.36),0 0 0 0 rgba(34,131,255,.55)}
+      70%{transform:scale(1.02);box-shadow:0 10px 24px rgba(0,0,0,.36),0 0 0 14px rgba(34,131,255,0)}
+      100%{transform:scale(1);box-shadow:0 10px 24px rgba(0,0,0,.36),0 0 0 0 rgba(34,131,255,0)}
+    }
     .help-fab:hover{filter:brightness(1.06)}
     .help-fab:focus-visible{outline:2px solid #7be2ff;outline-offset:2px}
+    .help-fab-tip{
+      position:fixed;right:76px;bottom:30px;z-index:11890;display:none;
+      padding:8px 10px;border-radius:10px;background:rgba(11,24,45,.94);border:1px solid rgba(255,255,255,.16);
+      color:#dce9ff;font-size:12px;white-space:nowrap;box-shadow:0 10px 20px rgba(0,0,0,.28)
+    }
+    .help-fab-tip.show{display:block}
     @media (max-width:1320px){
       .grid{grid-template-columns:1fr}
       .charts{grid-template-columns:1fr}
       .pitch-grid{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width:900px){
+      .help-fab-tip{display:none !important}
     }
   </style>
 </head>
@@ -419,11 +434,14 @@
         <button id="introChoiceQuickBtn" type="button">Start quick tour (recommended)</button>
         <button id="introChoiceDeepBtn" type="button">Start in-depth tour</button>
         <button id="introChoiceSkipBtn" type="button" class="choice-secondary">Skip for now</button>
+        <button id="introChoiceResetBtn" type="button" class="choice-secondary">Reset first-visit memory (demo/training)</button>
       </div>
+      <div id="introChoiceResetMsg" class="note" style="display:none;margin-top:8px">Onboarding memory reset. Refresh the page to simulate a brand-new first visit.</div>
     </div>
   </div>
 
   <button id="helpTourFab" class="help-fab" type="button" aria-label="Open walkthrough options" title="Walkthrough options">?</button>
+  <div id="helpTourTip" class="help-fab-tip" role="status" aria-live="polite">Need a tour? Tap ?</div>
 
   <script>
     let dynoOverlay = {compression: [], rebound: []};
@@ -528,16 +546,30 @@
       return INTRO_STEP_MS[introState.mode] || INTRO_STEP_MS.quick;
     }
 
+    function updateHelpFabState(){
+      const fab = document.getElementById('helpTourFab');
+      const tip = document.getElementById('helpTourTip');
+      const sawChoice = localStorage.getItem(INTRO_CHOICE_STORAGE_KEY) === '1';
+      const sawTour = localStorage.getItem(INTRO_STORAGE_KEY) === '1';
+      const chooserOpen = document.getElementById('introChoiceOverlay').classList.contains('active');
+      const showHint = !sawChoice && !sawTour && !chooserOpen && !introState.running;
+      fab.classList.toggle('pulse', showHint);
+      tip.classList.toggle('show', showHint);
+    }
+
     function showIntroChoiceOverlay(){
       const choice = document.getElementById('introChoiceOverlay');
       choice.classList.add('active');
       choice.setAttribute('aria-hidden', 'false');
+      document.getElementById('introChoiceResetMsg').style.display = 'none';
+      updateHelpFabState();
     }
 
     function hideIntroChoiceOverlay(){
       const choice = document.getElementById('introChoiceOverlay');
       choice.classList.remove('active');
       choice.setAttribute('aria-hidden', 'true');
+      updateHelpFabState();
     }
 
     function setPaymentStatus(message, kind=''){
@@ -689,6 +721,7 @@
       if (markAsSeen){
         localStorage.setItem(INTRO_STORAGE_KEY, '1');
       }
+      updateHelpFabState();
     }
 
     function startIntroTour(mode = 'quick', force = false){
@@ -1043,6 +1076,7 @@
       if (paymentState.paid || paymentState.bypass) setLocked(false);
       else resetLockedOutputs();
       loadDemo();
+      updateHelpFabState();
       const sawChoice = localStorage.getItem(INTRO_CHOICE_STORAGE_KEY) === '1';
       const sawTour = localStorage.getItem(INTRO_STORAGE_KEY) === '1';
       window.setTimeout(() => {
@@ -1078,10 +1112,18 @@
       localStorage.setItem(INTRO_CHOICE_STORAGE_KEY, '1');
       localStorage.setItem(INTRO_STORAGE_KEY, '1');
       hideIntroChoiceOverlay();
+      updateHelpFabState();
+    });
+    document.getElementById('introChoiceResetBtn').addEventListener('click', () => {
+      localStorage.removeItem(INTRO_CHOICE_STORAGE_KEY);
+      localStorage.removeItem(INTRO_STORAGE_KEY);
+      document.getElementById('introChoiceResetMsg').style.display = 'block';
+      updateHelpFabState();
     });
     document.getElementById('helpTourFab').addEventListener('click', () => {
       endIntroTour(false);
       showIntroChoiceOverlay();
+      updateHelpFabState();
     });
     window.addEventListener('resize', () => {
       if (!introState.running) return;
@@ -1095,6 +1137,7 @@
         if (chooser.classList.contains('active')){
           localStorage.setItem(INTRO_CHOICE_STORAGE_KEY, '1');
           hideIntroChoiceOverlay();
+          updateHelpFabState();
         }
       }
     });
