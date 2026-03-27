@@ -591,9 +591,10 @@ def chassis_measurement(inp: SimulationInput) -> dict:
     chain_angle_deg = float(np.degrees(chain_angle_rad))
 
     # Practical anti-squat proxy for setup guidance.
+    # Use magnitude ratio so geometry sign convention does not invert the estimate.
     denom = max(abs(np.tan(swingarm_angle_rad)), 0.05)
     geom_factor = max(inp.cg_height_mm / max(inp.rear_tire_radius_mm, 1.0), 0.6)
-    anti_squat_pct = float(100.0 * (np.tan(chain_angle_rad) / denom) / geom_factor)
+    anti_squat_pct = float(100.0 * (abs(np.tan(chain_angle_rad)) / denom) / geom_factor)
     anti_squat_pct = float(clamp(anti_squat_pct, 20.0, 180.0))
 
     cg_x = clamp(inp.cg_from_front_axle_mm, 1.0, max(inp.wheelbase_mm - 1.0, 2.0))
@@ -815,6 +816,20 @@ def consume_paid_token(payment_token: str) -> int:
         return remaining
 
 
+def try_consume_paid_token(payment_token: str | None) -> bool:
+    if not payment_token:
+        return False
+    with PAYMENT_LOCK:
+        paid = PAID_PAYMENTS.get(payment_token)
+        if not paid:
+            return False
+        remaining = int(paid.get("remaining_uses", 0))
+        if remaining <= 0:
+            return False
+        paid["remaining_uses"] = remaining - 1
+        return True
+
+
 def create_paypal_order(settings: dict, customer_reference: str | None = None) -> dict:
     access_token = paypal_access_token(settings)
     payload = {
@@ -1012,7 +1027,8 @@ def parse_dyno(req: DynoCsvInput) -> JSONResponse:
 
 @app.post("/api/simulate")
 def simulate(inp: SimulationInput) -> JSONResponse:
-    if not payment_gate_bypass() and not payment_is_paid(inp.payment_token):
+    bypass = payment_gate_bypass()
+    if not bypass and not try_consume_paid_token(inp.payment_token):
         return JSONResponse(
             {
                 "error": "Payment required. Complete USD 100.00 PayPal payment to unlock calculations.",
@@ -1069,6 +1085,4 @@ def simulate(inp: SimulationInput) -> JSONResponse:
         "rebound": rebound,
         "spring": spring,
     }
-    if not payment_gate_bypass() and inp.payment_token:
-        consume_paid_token(inp.payment_token)
     return JSONResponse(result)
