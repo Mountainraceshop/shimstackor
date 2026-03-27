@@ -55,3 +55,15 @@ This is a solid scaffold for the engineering product brief and is intended to be
 
 - `POST /api/parse-dyno-csv`  
   Accepts `{ "csv_text": "..." }` and parses velocity/force columns for dyno overlay.
+
+## Render deployment (important)
+
+The app is inside `shim-flow-simulator/`, not the repo root.
+
+If configuring manually in Render:
+
+- **Root Directory**: `shim-flow-simulator`
+- **Build Command**: `pip install -r requirements.txt`
+- **Start Command**: `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+This repository also includes a `render.yaml` at repo root with the same values.
