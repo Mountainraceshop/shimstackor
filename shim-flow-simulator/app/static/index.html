@@ -112,6 +112,12 @@
     }
     .intro-choice-title{margin:0 0 8px;font-size:24px}
     .intro-choice-text{margin:0;color:#d5e5ff;line-height:1.5}
+    .intro-choice-teaser{
+      margin-top:12px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.18)
+    }
+    .intro-choice-caption{font-size:12px;color:#cfe0ff;line-height:1.45;min-height:34px}
+    .intro-choice-progress{height:6px;border-radius:999px;background:rgba(255,255,255,.14);margin-top:8px;overflow:hidden}
+    .intro-choice-progress>span{display:block;height:100%;width:0;background:linear-gradient(90deg,#3ec2ff,#8be9ff)}
     .intro-choice-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px}
     .intro-choice-actions button{padding:11px 12px}
     .choice-secondary{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.22)}
@@ -430,6 +436,10 @@
       <div class="section" style="margin-bottom:4px">Welcome</div>
       <h3 class="intro-choice-title">Choose your walkthrough</h3>
       <p class="intro-choice-text">Pick a guided intro style now, or skip and start tuning immediately. You can replay any tour later from the top-right buttons.</p>
+      <div class="intro-choice-teaser">
+        <div id="introChoiceTeaserScene" class="intro-choice-caption">Cinematic teaser: flow-path balance and shim response preview.</div>
+        <div class="intro-choice-progress"><span id="introChoiceTeaserProgress"></span></div>
+      </div>
       <div class="intro-choice-actions">
         <button id="introChoiceQuickBtn" type="button">Start quick tour (recommended)</button>
         <button id="introChoiceDeepBtn" type="button">Start in-depth tour</button>
@@ -456,7 +466,15 @@
     };
     const INTRO_STORAGE_KEY = 'shimstackor_intro_seen_v1';
     const INTRO_CHOICE_STORAGE_KEY = 'shimstackor_intro_choice_seen_v1';
+    const TEASER_LOOP_MS = 20000;
     const INTRO_STEP_MS = { quick: 5400, detailed: 7600 };
+    const teaserScenes = [
+      { at: 0.00, text: 'Scene 1/5: hydraulic flow demand builds through piston and bypass paths.' },
+      { at: 0.20, text: 'Scene 2/5: shim lift increases with pressure, changing effective flow area.' },
+      { at: 0.40, text: 'Scene 3/5: low/mid/high-speed regions shift force characteristics.' },
+      { at: 0.60, text: 'Scene 4/5: cavitation margin and reservoir behavior influence consistency.' },
+      { at: 0.80, text: 'Scene 5/5: engineering outputs support clear, customer-ready decisions.' },
+    ];
     const introTours = {
       quick: [
         {
@@ -537,6 +555,10 @@
       demoTimer: null,
       startedAt: 0,
     };
+    const chooserTeaserState = {
+      timer: null,
+      startedAt: 0,
+    };
 
     function currentIntroSteps(){
       return introTours[introState.mode] || introTours.quick;
@@ -544,6 +566,54 @@
 
     function currentIntroStepMs(){
       return INTRO_STEP_MS[introState.mode] || INTRO_STEP_MS.quick;
+    }
+
+    function teaserSceneAt(progress01){
+      let scene = teaserScenes[0];
+      for (const s of teaserScenes){
+        if (progress01 >= s.at) scene = s;
+      }
+      return scene;
+    }
+
+    function runChooserTeaserFrame(){
+      const chooser = document.getElementById('introChoiceOverlay');
+      if (!chooser.classList.contains('active')) return;
+      const elapsed = (Date.now() - chooserTeaserState.startedAt) % TEASER_LOOP_MS;
+      const progress01 = elapsed / TEASER_LOOP_MS;
+      const scene = teaserSceneAt(progress01);
+      document.getElementById('introChoiceTeaserScene').textContent = scene.text;
+      document.getElementById('introChoiceTeaserProgress').style.width = `${(progress01 * 100).toFixed(1)}%`;
+
+      // Lightweight cinematic loop tied to existing cutaway animation.
+      const phase = progress01 * Math.PI * 2;
+      const velocity = 0.08 + Math.abs(Math.sin(phase * 1.7)) * 0.9;
+      const pressure = 5200 + velocity * 30000;
+      const shimLift = 0.025 + velocity * 0.23;
+      const flowMain = Math.min(95, 54 + velocity * 41);
+      updateAnimation({
+        velocity_m_s: velocity,
+        pressure_pa: pressure,
+        shim_lift_mm: shimLift,
+        flow_main_pct: flowMain,
+        flow_bypass_pct: Math.max(5, 100 - flowMain),
+      });
+    }
+
+    function stopChooserTeaser(reset = false){
+      if (chooserTeaserState.timer) window.clearInterval(chooserTeaserState.timer);
+      chooserTeaserState.timer = null;
+      if (reset){
+        document.getElementById('introChoiceTeaserScene').textContent = 'Cinematic teaser: flow-path balance and shim response preview.';
+        document.getElementById('introChoiceTeaserProgress').style.width = '0%';
+      }
+    }
+
+    function startChooserTeaser(){
+      stopChooserTeaser();
+      chooserTeaserState.startedAt = Date.now();
+      runChooserTeaserFrame();
+      chooserTeaserState.timer = window.setInterval(runChooserTeaserFrame, 120);
     }
 
     function updateHelpFabState(){
@@ -562,6 +632,7 @@
       choice.classList.add('active');
       choice.setAttribute('aria-hidden', 'false');
       document.getElementById('introChoiceResetMsg').style.display = 'none';
+      startChooserTeaser();
       updateHelpFabState();
     }
 
@@ -569,6 +640,7 @@
       const choice = document.getElementById('introChoiceOverlay');
       choice.classList.remove('active');
       choice.setAttribute('aria-hidden', 'true');
+      stopChooserTeaser(true);
       updateHelpFabState();
     }
 
