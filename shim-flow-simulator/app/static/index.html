@@ -65,6 +65,8 @@
     .lockable.locked .lock-overlay{display:flex}
     body.tour-readable .lockable.locked .lockable-content{filter:none;opacity:1;pointer-events:auto;user-select:auto}
     body.tour-readable .lockable.locked .lock-overlay{display:none}
+    body.tour-readable .intro-overlay{background:rgba(5,9,18,.22);backdrop-filter:none}
+    body.tour-readable .intro-choice-overlay{background:rgba(5,9,18,.30);backdrop-filter:none}
     .viz{padding:0;overflow:hidden}
     .viz-top{display:flex;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
     .viz-wrap{padding:16px}
@@ -94,6 +96,17 @@
     .stack-panels{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
     .stack-box{border:1px solid var(--line);background:rgba(0,0,0,.16);border-radius:10px;padding:8px}
     .stack-box pre{margin:6px 0 0;white-space:pre-wrap;font-size:11px;line-height:1.35;color:#d7e6ff}
+    .shim-editor{
+      display:grid;
+      grid-template-columns:76px 82px 62px;
+      gap:6px;
+      align-items:center
+    }
+    .shim-editor .hd{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .shim-editor input{padding:8px 7px;text-align:right}
+    .shim-editor .row{display:contents}
+    .shim-editor-wrap{margin-top:6px}
+    .shim-editor-note{margin-top:6px;font-size:11px;color:var(--muted)}
     .chart{height:250px}
     .charts{display:grid;gap:16px;margin-top:16px}
     .ghost-btn{
@@ -1206,10 +1219,19 @@
     }
 
     function parseStack(text){
-      return text.trim().split(/\n+/).filter(Boolean).map(line=>{
-        const [diameter_mm, thickness_mm, qty] = line.split(',').map(v=>Number(String(v).trim()));
-        return {diameter_mm, thickness_mm, qty};
-      });
+      return String(text || '')
+        .trim()
+        .split(/\n+/)
+        .filter(Boolean)
+        .map(line=>{
+          const parts = line
+            .split(/[,\t]/)
+            .map(v=>String(v).trim())
+            .filter(Boolean);
+          const [diameter_mm, thickness_mm, qty] = parts.map(Number);
+          return {diameter_mm, thickness_mm, qty};
+        })
+        .filter(r => Number.isFinite(r.diameter_mm) && Number.isFinite(r.thickness_mm) && Number.isFinite(r.qty));
     }
 
     function payloadFromForm(){
@@ -1544,6 +1566,80 @@
           el.value = String(value);
         }
       }
+    }
+
+    function normalizeShimCell(value, col){
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return raw;
+      if (col === 0) return String(Math.max(0, Math.round(n)));
+      if (col === 1) return Number(Math.max(0, n).toFixed(2)).toString();
+      return String(Math.max(1, Math.round(n)));
+    }
+
+    function attachSpreadsheetEditor(textareaId){
+      const ta = document.getElementById(textareaId);
+      if (!ta) return;
+      ta.spellcheck = false;
+      ta.wrap = 'off';
+      ta.addEventListener('keydown', (e) => {
+        const key = e.key;
+        const navForward = key === 'Tab' || key === 'Enter' || key === ',' || key === ';';
+        if (!navForward) return;
+        e.preventDefault();
+
+        const val = ta.value;
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        const before = val.slice(0, start);
+        const after = val.slice(end);
+        const lineStart = before.lastIndexOf('\n') + 1;
+        const lineEndRel = after.indexOf('\n');
+        const lineEnd = lineEndRel >= 0 ? end + lineEndRel : val.length;
+        const line = val.slice(lineStart, lineEnd);
+        const row = line.split(/[,\t]/).map(s => s.trim());
+
+        let col = 0;
+        for (let i = lineStart; i < start; i += 1){
+          const ch = val[i];
+          if (ch === ',' || ch === '\t') col += 1;
+        }
+        col = Math.min(Math.max(col, 0), 2);
+
+        while (row.length < 3) row.push('');
+        row[col] = normalizeShimCell(row[col], col);
+        const sep = ',';
+        const normalizedLine = row.join(sep);
+        ta.value = val.slice(0, lineStart) + normalizedLine + val.slice(lineEnd);
+
+        const nextCol = col + 1;
+        if (nextCol <= 2){
+          let pos = lineStart;
+          for (let i = 0; i < nextCol; i += 1){
+            const idx = ta.value.indexOf(',', pos);
+            pos = idx >= 0 ? idx + 1 : ta.value.length;
+          }
+          while (pos < ta.value.length && ta.value[pos] === ' ') pos += 1;
+          ta.selectionStart = ta.selectionEnd = pos;
+          return;
+        }
+
+        const newLineStart = ta.value.indexOf('\n', lineStart);
+        if (newLineStart === -1){
+          ta.value += '\n,,';
+          ta.selectionStart = ta.selectionEnd = ta.value.length - 2;
+          return;
+        }
+        const nextLineStart = newLineStart + 1;
+        const nextLineEnd = ta.value.indexOf('\n', nextLineStart);
+        const endIdx = nextLineEnd >= 0 ? nextLineEnd : ta.value.length;
+        const nextLine = ta.value.slice(nextLineStart, endIdx);
+        if (!nextLine.trim()){
+          ta.value = ta.value.slice(0, nextLineStart) + ',,' + ta.value.slice(endIdx);
+        }
+        ta.selectionStart = ta.selectionEnd = nextLineStart;
+      });
     }
 
     function crossoverIntensityValue(){
@@ -1918,6 +2014,7 @@
     document.getElementById('simulateBtn').addEventListener('click', simulate);
     document.getElementById('demoBtn').addEventListener('click', loadDemo);
     document.getElementById('loadDynoBtn').addEventListener('click', loadDynoCsv);
+    ['compression_stack','rebound_stack','base_valve_stack','mid_valve_stack'].forEach(attachSpreadsheetEditor);
     updateModeVisibility();
     initApp();
   </script>

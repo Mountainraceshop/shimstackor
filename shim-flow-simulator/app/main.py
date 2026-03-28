@@ -127,7 +127,7 @@ class SimulationInput(BaseModel):
     air_target_rate_n_mm: float = Field(9.81, gt=0.1, le=60)
 
     # Fork spring / chamber inputs
-    oil_height_mm: float = Field(110.0, gt=1)
+    oil_height_mm: float = Field(110.0, gt=1, le=400)
     tube_inner_diameter_mm: float = Field(48.0, gt=1)
     fork_positive_air_bar_abs: float = Field(8.0, gt=0.5)
     fork_negative_air_bar_abs: float = Field(6.0, gt=0.3)
@@ -552,14 +552,18 @@ def fork_spring_curve(inp: SimulationInput) -> list[dict]:
     travel_points = np.linspace(0.0, inp.travel_mm, 41)
     curve = []
 
-    v_pos0 = area * mm_to_m(inp.oil_height_mm)
+    # Treat oil height as the air gap at full bottom-out (workshop convention).
+    # At extension, the positive chamber includes full stroke displacement volume.
+    v_pos_bottom = area * mm_to_m(inp.oil_height_mm)
+    v_pos0 = area * mm_to_m(inp.oil_height_mm + inp.travel_mm)
     v_neg0 = max(inp.fork_secondary_volume_cc * 1e-6, area * 0.010)
     p_pos0 = bar_to_pa(inp.fork_positive_air_bar_abs)
     p_neg0 = bar_to_pa(inp.fork_negative_air_bar_abs)
 
     for travel_mm in travel_points:
         disp = area * mm_to_m(travel_mm)
-        v_pos = max(v_pos0 - disp, 0.1 * v_pos0)
+        # Keep a tiny floor to avoid numeric singularities only.
+        v_pos = max(v_pos0 - disp, max(v_pos_bottom * 0.98, 1e-8))
         p_pos = p_pos0 * (v_pos0 / v_pos) ** DEFAULT_GAMMA
         p_neg = ATM_PA
 
