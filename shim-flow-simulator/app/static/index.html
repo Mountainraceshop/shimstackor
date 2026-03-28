@@ -112,6 +112,10 @@
     .mode-raw-selector{display:none}
     .mode-note{font-size:12px;color:#cfe0ff;margin:0 0 10px;line-height:1.45}
     .preset-block{margin:0 0 10px;padding:10px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(0,0,0,.14)}
+    .target-lock-panel{margin:0 0 10px;padding:10px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:rgba(0,0,0,.14)}
+    .target-lock-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .target-lock-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+    .target-lock-actions button{padding:9px 12px}
     .preset-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
     .preset-row select{padding:9px}
     .preset-row button{width:auto;white-space:nowrap;padding:9px 12px}
@@ -282,6 +286,38 @@
           </div>
           <div id="abCompareTag" class="ab-compare-tag">A/B compare inactive</div>
         </div>
+        <div class="target-lock-panel">
+          <label>Lock targets to this bike profile</label>
+          <div class="target-lock-grid">
+            <div>
+              <label style="margin-top:2px">Discipline profile</label>
+              <select id="targetProfile">
+                <option value="mx">MX</option>
+                <option value="enduro">Enduro</option>
+                <option value="sx">Supercross</option>
+                <option value="trail">Trail/ADV</option>
+                <option value="road_race">Road race</option>
+              </select>
+            </div>
+            <div>
+              <label style="margin-top:2px">Rider level</label>
+              <select id="targetRiderLevel">
+                <option value="novice">Novice</option>
+                <option value="intermediate" selected>Intermediate</option>
+                <option value="pro">Pro</option>
+              </select>
+            </div>
+            <div><label>Comp zeta target</label><input id="targetCompZeta" type="number" step="0.01" value="0.54"></div>
+            <div><label>Reb zeta target</label><input id="targetRebZeta" type="number" step="0.01" value="0.39"></div>
+            <div><label>Main port area target mm2</label><input id="targetPortArea" type="number" step="0.1" value="120.8"></div>
+            <div><label>Min cavitation margin bar</label><input id="targetCavMargin" type="number" step="0.01" value="1.00"></div>
+          </div>
+          <div class="target-lock-actions">
+            <button id="lockTargetsBtn" type="button">Lock targets</button>
+            <button id="resetTargetsBtn" type="button">Reset defaults</button>
+          </div>
+          <div class="note" style="margin-top:6px">Targets are saved in your browser and drive the green/yellow badge logic.</div>
+        </div>
         <div class="form-grid">
           <div class="input-group-title first">Architecture and platform</div>
           <div class="mode-raw-selector"><label>Machine</label><select id="mode"><option value="fork">Fork</option><option value="shock">Shock</option></select></div>
@@ -441,10 +477,10 @@
               <div class="stage-label stage-label-bottom">Base valve</div>
             </div>
             <div class="metrics">
-              <div class="metric"><div class="k">Compression zeta</div><div class="v" id="compZeta">-</div><div class="t">Target 0.54</div></div>
-              <div class="metric"><div class="k">Rebound zeta</div><div class="v" id="rebZeta">-</div><div class="t">Target 0.39</div></div>
-              <div class="metric"><div class="k">Main port area mm2</div><div class="v" id="portArea">-</div><div class="t">Target 120.8 mm2</div></div>
-              <div class="metric"><div class="k">Cavitation margin bar</div><div class="v" id="cavMargin">-</div><div class="t">Target >= 1.00 bar</div></div>
+              <div class="metric"><div class="k">Compression zeta</div><div class="v" id="compZeta">-</div><div class="t" id="targetCompZetaText">Target 0.54</div></div>
+              <div class="metric"><div class="k">Rebound zeta</div><div class="v" id="rebZeta">-</div><div class="t" id="targetRebZetaText">Target 0.39</div></div>
+              <div class="metric"><div class="k">Main port area mm2</div><div class="v" id="portArea">-</div><div class="t" id="targetPortAreaText">Target 120.8 mm2</div></div>
+              <div class="metric"><div class="k">Cavitation margin bar</div><div class="v" id="cavMargin">-</div><div class="t" id="targetCavMarginText">Target >= 1.00 bar</div></div>
             </div>
           </div>
         </div>
@@ -579,7 +615,36 @@
     };
     const CROSSOVER_PRESETS = new Set(['kyb_sss_enduro_fork_crossover', 'kyb_enduro_shock_crossover']);
     const CROSSOVER_SCALE = { min: 0.70, max: 1.35 };
-    const METRIC_TARGETS = { comp_zeta: 0.54, reb_zeta: 0.39, port_area_mm2: 120.8, cav_margin_bar_min: 1.0 };
+    const DEFAULT_METRIC_TARGETS = { comp_zeta: 0.54, reb_zeta: 0.39, port_area_mm2: 120.8, cav_margin_bar_min: 1.0 };
+    const TARGET_STORAGE_KEY = 'shimstackor_metric_targets_v1';
+    const TARGET_PROFILE_DEFAULTS = {
+      mx: {
+        novice: { comp_zeta: 0.46, reb_zeta: 0.35, port_area_mm2: 122.0, cav_margin_bar_min: 0.90 },
+        intermediate: { comp_zeta: 0.52, reb_zeta: 0.39, port_area_mm2: 120.8, cav_margin_bar_min: 1.00 },
+        pro: { comp_zeta: 0.58, reb_zeta: 0.44, port_area_mm2: 118.0, cav_margin_bar_min: 1.10 },
+      },
+      enduro: {
+        novice: { comp_zeta: 0.40, reb_zeta: 0.32, port_area_mm2: 126.0, cav_margin_bar_min: 0.90 },
+        intermediate: { comp_zeta: 0.46, reb_zeta: 0.36, port_area_mm2: 124.0, cav_margin_bar_min: 1.00 },
+        pro: { comp_zeta: 0.52, reb_zeta: 0.40, port_area_mm2: 121.0, cav_margin_bar_min: 1.10 },
+      },
+      sx: {
+        novice: { comp_zeta: 0.50, reb_zeta: 0.38, port_area_mm2: 118.0, cav_margin_bar_min: 1.00 },
+        intermediate: { comp_zeta: 0.56, reb_zeta: 0.42, port_area_mm2: 116.0, cav_margin_bar_min: 1.10 },
+        pro: { comp_zeta: 0.62, reb_zeta: 0.47, port_area_mm2: 113.5, cav_margin_bar_min: 1.20 },
+      },
+      trail: {
+        novice: { comp_zeta: 0.36, reb_zeta: 0.31, port_area_mm2: 132.0, cav_margin_bar_min: 0.85 },
+        intermediate: { comp_zeta: 0.41, reb_zeta: 0.34, port_area_mm2: 129.0, cav_margin_bar_min: 0.95 },
+        pro: { comp_zeta: 0.46, reb_zeta: 0.37, port_area_mm2: 126.0, cav_margin_bar_min: 1.00 },
+      },
+      road_race: {
+        novice: { comp_zeta: 0.54, reb_zeta: 0.44, port_area_mm2: 114.0, cav_margin_bar_min: 1.10 },
+        intermediate: { comp_zeta: 0.60, reb_zeta: 0.49, port_area_mm2: 111.5, cav_margin_bar_min: 1.20 },
+        pro: { comp_zeta: 0.66, reb_zeta: 0.54, port_area_mm2: 108.0, cav_margin_bar_min: 1.30 },
+      },
+    };
+    let activeMetricTargets = { ...DEFAULT_METRIC_TARGETS };
     const paymentState = {
       enabled: false,
       bypass: false,
@@ -805,6 +870,99 @@
       document.getElementById('aerEqRate').textContent = '-';
       document.getElementById('aerEqPreload').textContent = '-';
       document.getElementById('aerReqPsi').textContent = '-';
+    }
+
+    function resolveProfileTargets(profile, riderLevel){
+      return TARGET_PROFILE_DEFAULTS[profile]?.[riderLevel] || DEFAULT_METRIC_TARGETS;
+    }
+
+    function readTargetInputs(){
+      const comp = Number(document.getElementById('targetCompZeta').value);
+      const reb = Number(document.getElementById('targetRebZeta').value);
+      const port = Number(document.getElementById('targetPortArea').value);
+      const cav = Number(document.getElementById('targetCavMargin').value);
+      return {
+        comp_zeta: Number.isFinite(comp) && comp > 0 ? comp : DEFAULT_METRIC_TARGETS.comp_zeta,
+        reb_zeta: Number.isFinite(reb) && reb > 0 ? reb : DEFAULT_METRIC_TARGETS.reb_zeta,
+        port_area_mm2: Number.isFinite(port) && port > 0 ? port : DEFAULT_METRIC_TARGETS.port_area_mm2,
+        cav_margin_bar_min: Number.isFinite(cav) && cav > 0 ? cav : DEFAULT_METRIC_TARGETS.cav_margin_bar_min,
+      };
+    }
+
+    function writeTargetInputs(targets){
+      document.getElementById('targetCompZeta').value = targets.comp_zeta.toFixed(2);
+      document.getElementById('targetRebZeta').value = targets.reb_zeta.toFixed(2);
+      document.getElementById('targetPortArea').value = targets.port_area_mm2.toFixed(1);
+      document.getElementById('targetCavMargin').value = targets.cav_margin_bar_min.toFixed(2);
+    }
+
+    function refreshTargetText(){
+      document.getElementById('targetCompZetaText').textContent = `Target ${activeMetricTargets.comp_zeta.toFixed(2)}`;
+      document.getElementById('targetRebZetaText').textContent = `Target ${activeMetricTargets.reb_zeta.toFixed(2)}`;
+      document.getElementById('targetPortAreaText').textContent = `Target ${activeMetricTargets.port_area_mm2.toFixed(1)} mm2`;
+      document.getElementById('targetCavMarginText').textContent = `Target >= ${activeMetricTargets.cav_margin_bar_min.toFixed(2)} bar`;
+    }
+
+    function persistTargets(profile, riderLevel){
+      const payload = {
+        profile,
+        riderLevel,
+        targets: activeMetricTargets,
+      };
+      localStorage.setItem(TARGET_STORAGE_KEY, JSON.stringify(payload));
+    }
+
+    function applyCurrentTargetsToBadges(){
+      refreshTargetText();
+      if (latestSimulationData){
+        updateSummary(latestSimulationData);
+      }
+    }
+
+    function lockTargetsFromPanel(){
+      const profile = document.getElementById('targetProfile').value;
+      const riderLevel = document.getElementById('targetRiderLevel').value;
+      activeMetricTargets = readTargetInputs();
+      persistTargets(profile, riderLevel);
+      applyCurrentTargetsToBadges();
+    }
+
+    function loadTargetsFromStorage(){
+      const profileEl = document.getElementById('targetProfile');
+      const levelEl = document.getElementById('targetRiderLevel');
+      let loaded = false;
+      try{
+        const raw = localStorage.getItem(TARGET_STORAGE_KEY);
+        if (raw){
+          const parsed = JSON.parse(raw);
+          const profile = parsed?.profile || profileEl.value;
+          const riderLevel = parsed?.riderLevel || levelEl.value;
+          profileEl.value = profile in TARGET_PROFILE_DEFAULTS ? profile : profileEl.value;
+          levelEl.value = riderLevel in (TARGET_PROFILE_DEFAULTS[profileEl.value] || {}) ? riderLevel : levelEl.value;
+          if (parsed?.targets){
+            activeMetricTargets = {
+              comp_zeta: Number(parsed.targets.comp_zeta),
+              reb_zeta: Number(parsed.targets.reb_zeta),
+              port_area_mm2: Number(parsed.targets.port_area_mm2),
+              cav_margin_bar_min: Number(parsed.targets.cav_margin_bar_min),
+            };
+            loaded = Object.values(activeMetricTargets).every(v => Number.isFinite(v) && v > 0);
+          }
+        }
+      }catch(_err){
+        loaded = false;
+      }
+      if (!loaded){
+        activeMetricTargets = { ...resolveProfileTargets(profileEl.value, levelEl.value) };
+      }
+      writeTargetInputs(activeMetricTargets);
+      refreshTargetText();
+    }
+
+    function previewProfileTargetsInPanel(){
+      const profile = document.getElementById('targetProfile').value;
+      const riderLevel = document.getElementById('targetRiderLevel').value;
+      writeTargetInputs(resolveProfileTargets(profile, riderLevel));
     }
 
     function clearIntroAutoplayTimers(){
@@ -1211,10 +1369,10 @@
       const portEl = document.getElementById('portArea');
       const cavEl = document.getElementById('cavMargin');
 
-      const compOk = Math.abs(summary.compression_zeta - METRIC_TARGETS.comp_zeta) <= 0.08;
-      const rebOk = Math.abs(summary.rebound_zeta - METRIC_TARGETS.reb_zeta) <= 0.08;
-      const portOk = Math.abs(summary.total_port_area_mm2 - METRIC_TARGETS.port_area_mm2) <= 8.0;
-      const cavOk = comp03.cavitation_margin_bar >= METRIC_TARGETS.cav_margin_bar_min;
+      const compOk = Math.abs(summary.compression_zeta - activeMetricTargets.comp_zeta) <= 0.08;
+      const rebOk = Math.abs(summary.rebound_zeta - activeMetricTargets.reb_zeta) <= 0.08;
+      const portOk = Math.abs(summary.total_port_area_mm2 - activeMetricTargets.port_area_mm2) <= 8.0;
+      const cavOk = comp03.cavitation_margin_bar >= activeMetricTargets.cav_margin_bar_min;
 
       compEl.classList.toggle('target-ok', compOk);
       compEl.classList.toggle('target-warn', !compOk);
@@ -1591,6 +1749,7 @@
       if (paymentState.paid || paymentState.bypass) setLocked(false);
       else resetLockedOutputs();
       loadDemo();
+      loadTargetsFromStorage();
       updateCrossoverIntensityLabel();
       updateHelpFabState();
       updateAbCompareTag();
@@ -1670,6 +1829,17 @@
       } else {
         setCrossoverChangeNote('Select an Enduro crossover preset to apply intensity changes.');
       }
+    });
+    document.getElementById('targetProfile').addEventListener('change', previewProfileTargetsInPanel);
+    document.getElementById('targetRiderLevel').addEventListener('change', previewProfileTargetsInPanel);
+    document.getElementById('lockTargetsBtn').addEventListener('click', lockTargetsFromPanel);
+    document.getElementById('resetTargetsBtn').addEventListener('click', () => {
+      const profile = document.getElementById('targetProfile').value;
+      const riderLevel = document.getElementById('targetRiderLevel').value;
+      activeMetricTargets = { ...resolveProfileTargets(profile, riderLevel) };
+      writeTargetInputs(activeMetricTargets);
+      persistTargets(profile, riderLevel);
+      applyCurrentTargetsToBadges();
     });
     document.getElementById('helpTourFab').addEventListener('click', () => {
       endIntroTour(false);
