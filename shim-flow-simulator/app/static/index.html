@@ -26,6 +26,19 @@
     .pane{padding:16px}
     .section{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .input-group-title{
+      grid-column:1 / -1;
+      margin:8px 0 0;
+      padding-top:8px;
+      border-top:1px solid rgba(255,255,255,.12);
+      font-size:11px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#9fc3ff;
+      font-weight:700
+    }
+    .input-group-title.first{margin-top:0;padding-top:0;border-top:none}
+    .input-group-note{grid-column:1 / -1;font-size:12px;color:var(--muted);margin:-2px 0 2px}
     label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
     input,select,textarea,button{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:#091322;color:var(--text)}
     textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
@@ -67,7 +80,6 @@
       position:absolute;left:50%;transform:translateX(-50%);font-size:11px;color:#cfe0ff;
       background:rgba(9,19,34,.7);padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.15)
     }
-    .stage-label-top{top:38px}
     .stage-label-bottom{bottom:12px}
     .flow{position:absolute;height:8px;border-radius:10px;background:linear-gradient(90deg,rgba(77,212,172,.35),rgba(77,212,172,.92));animation:f 1.2s linear infinite}
     @keyframes f{from{transform:translateX(-8px)}to{transform:translateX(8px)}}
@@ -271,9 +283,12 @@
           <div id="abCompareTag" class="ab-compare-tag">A/B compare inactive</div>
         </div>
         <div class="form-grid">
+          <div class="input-group-title first">Architecture and platform</div>
           <div class="mode-raw-selector"><label>Machine</label><select id="mode"><option value="fork">Fork</option><option value="shock">Shock</option></select></div>
           <div class="fork-only"><label>Fork platform</label><select id="fork_platform"><option value="coil">Coil</option><option value="kyb_psf1">KYB PSF1</option><option value="kyb_psf2">KYB PSF2</option><option value="showa_air">Showa Air</option><option value="wp_air">WP Air</option></select></div>
           <div class="shock-only"><label>Shock architecture</label><select id="shock_architecture"><option value="monotube">Monotube (KYB/Showa/WP)</option><option value="twin_tube">Twin-tube (Ohlins TTX/K-Tech)</option></select></div>
+
+          <div class="input-group-title">Hydraulic geometry</div>
           <div><label>Piston dia mm</label><input id="piston_diameter_mm" type="number" value="24"></div>
           <div><label>Shaft dia mm</label><input id="shaft_diameter_mm" type="number" value="12"></div>
           <div><label>Main ports count</label><input id="port_count" type="number" value="4"></div>
@@ -282,6 +297,8 @@
           <div><label>Base port dia mm</label><input id="base_port_diameter_mm" type="number" value="5.8"></div>
           <div><label>Mid ports count</label><input id="mid_port_count" type="number" value="3"></div>
           <div><label>Mid port dia mm</label><input id="mid_port_diameter_mm" type="number" value="4.8"></div>
+
+          <div class="input-group-title">Flow paths and adjusters</div>
           <div><label>Bleed dia mm</label><input id="bleed_diameter_mm" type="number" step="0.01" value="0.9"></div>
           <div><label>Piston bleed holes count</label><input id="piston_bleed_hole_count" type="number" value="0"></div>
           <div><label>Piston bleed hole dia mm</label><input id="piston_bleed_hole_diameter_mm" type="number" step="0.01" value="0.8"></div>
@@ -293,16 +310,24 @@
           <div><label>HSC spring N/mm</label><input id="hsc_spring_rate_n_per_mm" type="number" step="0.1" value="18"></div>
           <div><label>HSC preload mm</label><input id="hsc_preload_mm" type="number" step="0.1" value="1.0"></div>
           <div><label>HSC max lift mm</label><input id="hsc_max_lift_mm" type="number" step="0.1" value="1.0"></div>
+
+          <div class="input-group-title fork-only">Fork cartridge details</div>
           <div class="fork-only"><label>Mid-valve float mm</label><input id="mid_valve_float_mm" type="number" step="0.01" value="0.12"></div>
           <div class="fork-only"><label>Trampoline preload mm</label><input id="trampoline_preload_mm" type="number" step="0.01" value="0.06"></div>
           <div class="fork-only"><label>Trampoline spring N/mm</label><input id="trampoline_spring_rate_n_per_mm" type="number" step="0.1" value="20.0"></div>
+
+          <div class="input-group-title">Fluid properties</div>
           <div><label>Oil temp C</label><input id="oil_temperature_c" type="number" step="1" value="35"></div>
           <div><label>Oil viscosity cSt</label><input id="oil_viscosity_cst" type="number" step="0.1" value="16"></div>
           <div><label>Discharge coeff</label><input id="discharge_coefficient" type="number" step="0.01" value="0.70"></div>
+
+          <div class="input-group-title">Spring and travel</div>
           <div><label>Spring N/mm</label><input id="spring_rate_n_per_mm" type="number" step="0.1" value="4.6"></div>
           <div><label>Preload mm</label><input id="preload_mm" type="number" value="5"></div>
           <div><label>Travel mm</label><input id="travel_mm" type="number" value="300"></div>
           <div><label>Motion ratio</label><input id="motion_ratio" type="number" step="0.01" value="1"></div>
+
+          <div class="input-group-title">Chassis geometry</div>
           <div><label>Wheelbase mm</label><input id="wheelbase_mm" type="number" value="1480"></div>
           <div><label>Steering head angle deg</label><input id="steering_head_angle_deg" type="number" step="0.1" value="24.0"></div>
           <div><label>Triple clamp offset mm</label><input id="triple_clamp_offset_mm" type="number" step="0.1" value="32"></div>
@@ -317,6 +342,8 @@
           <div><label>Countershaft to rear axle mm</label><input id="countershaft_to_rear_axle_mm" type="number" step="0.1" value="580"></div>
           <div><label>CG height mm</label><input id="cg_height_mm" type="number" step="0.1" value="600"></div>
           <div><label>CG from front axle mm</label><input id="cg_from_front_axle_mm" type="number" step="0.1" value="780"></div>
+
+          <div class="input-group-title fork-only">Air spring reverse engineering (fork)</div>
           <div class="fork-only"><label>WP AER pressure psi</label><input id="air_spring_pressure_psi" type="number" step="0.1" value="171.2"></div>
           <div class="fork-only"><label>AER piston dia mm</label><input id="air_piston_diameter_mm" type="number" step="0.1" value="35"></div>
           <div class="fork-only"><label>AER positive volume cc</label><input id="air_positive_volume_cc" type="number" step="0.1" value="145"></div>
@@ -332,10 +359,15 @@
           <div class="fork-only"><label>Fork + chamber bar abs</label><input id="fork_positive_air_bar_abs" type="number" step="0.1" value="8"></div>
           <div class="fork-only"><label>Fork - chamber bar abs</label><input id="fork_negative_air_bar_abs" type="number" step="0.1" value="6"></div>
           <div class="fork-only"><label>Fork secondary cc</label><input id="fork_secondary_volume_cc" type="number" step="1" value="55"></div>
+
+          <div class="input-group-title shock-only">Reservoir and gas model (shock)</div>
           <div class="shock-only"><label>Reservoir gas bar</label><input id="initial_gas_pressure_bar" type="number" step="0.1" value="6"></div>
           <div class="shock-only"><label>Reservoir volume cc</label><input id="reservoir_volume_cc" type="number" step="1" value="120"></div>
+
+          <div class="input-group-title">Advanced limits and clamp</div>
           <div><label>Max velocity m/s</label><input id="shaft_velocity_max_m_s" type="number" step="0.1" value="1.0"></div>
           <div><label>Clamp dia mm</label><input id="clamp_diameter_mm" type="number" step="0.1" value="8"></div>
+          <div class="input-group-note">Future model input (next phase): ICS / bladder pressure dynamics and cartridge preload recommendation logic.</div>
         </div>
         <div class="row" style="margin-top:8px">
           <label><input id="include_base_valve" type="checkbox" checked> Include base valve</label>
@@ -406,7 +438,6 @@
               <div class="base-shim" id="baseShim" style="width:58px"></div>
               <div class="flow" id="flow1" style="left:calc(50% - 145px);top:148px;width:100px"></div>
               <div class="flow" id="flow2" style="left:calc(50% + 40px);top:326px;width:88px"></div>
-              <div class="stage-label stage-label-top">Cartridge top</div>
               <div class="stage-label stage-label-bottom">Base valve</div>
             </div>
             <div class="metrics">
