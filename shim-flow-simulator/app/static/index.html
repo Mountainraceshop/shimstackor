@@ -116,6 +116,8 @@
     .target-lock-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
     .target-lock-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
     .target-lock-actions button{padding:9px 12px}
+    .target-lock-toggle{margin-top:8px;font-size:12px;color:#dce9ff}
+    .target-lock-toggle input{width:auto;margin-right:6px}
     .preset-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
     .preset-row select{padding:9px}
     .preset-row button{width:auto;white-space:nowrap;padding:9px 12px}
@@ -316,6 +318,7 @@
             <button id="lockTargetsBtn" type="button">Lock targets</button>
             <button id="resetTargetsBtn" type="button">Reset defaults</button>
           </div>
+          <label class="target-lock-toggle"><input id="presetSyncTargets" type="checkbox" checked> Auto-sync target profile when applying presets</label>
           <div class="note" style="margin-top:6px">Targets are saved in your browser and drive the green/yellow badge logic.</div>
         </div>
         <div class="form-grid">
@@ -497,6 +500,7 @@
           <h3 class="section">Engineering summary</h3>
           <table class="table">
             <tr><td>Machine / platform</td><td id="sumPlatform">-</td></tr>
+            <tr><td>Active target profile</td><td id="sumTargetProfile">-</td></tr>
             <tr><td>Main port area</td><td id="sumPortArea">-</td></tr>
             <tr><td>Base / mid port area</td><td id="sumBaseMid">-</td></tr>
             <tr><td>Bleed / rebound area</td><td id="sumBleed">-</td></tr>
@@ -617,6 +621,15 @@
     const CROSSOVER_SCALE = { min: 0.70, max: 1.35 };
     const DEFAULT_METRIC_TARGETS = { comp_zeta: 0.54, reb_zeta: 0.39, port_area_mm2: 120.8, cav_margin_bar_min: 1.0 };
     const TARGET_STORAGE_KEY = 'shimstackor_metric_targets_v1';
+    const TARGET_SYNC_STORAGE_KEY = 'shimstackor_target_sync_v1';
+    const PROFILE_LABELS = { mx: 'MX', enduro: 'Enduro', sx: 'Supercross', trail: 'Trail/ADV', road_race: 'Road race' };
+    const RIDER_LEVEL_LABELS = { novice: 'Novice', intermediate: 'Intermediate', pro: 'Pro' };
+    const PRESET_TARGET_HINTS = {
+      kyb_sss_cartridge: { profile: 'mx', riderLevel: 'intermediate' },
+      kyb_sss_mx_fork: { profile: 'mx', riderLevel: 'pro' },
+      kyb_sss_enduro_fork_crossover: { profile: 'enduro', riderLevel: 'intermediate' },
+      kyb_enduro_shock_crossover: { profile: 'enduro', riderLevel: 'pro' },
+    };
     const TARGET_PROFILE_DEFAULTS = {
       mx: {
         novice: { comp_zeta: 0.46, reb_zeta: 0.35, port_area_mm2: 122.0, cav_margin_bar_min: 0.90 },
@@ -870,6 +883,7 @@
       document.getElementById('aerEqRate').textContent = '-';
       document.getElementById('aerEqPreload').textContent = '-';
       document.getElementById('aerReqPsi').textContent = '-';
+      document.getElementById('sumTargetProfile').textContent = currentTargetProfileText();
     }
 
     function resolveProfileTargets(profile, riderLevel){
@@ -901,6 +915,15 @@
       document.getElementById('targetRebZetaText').textContent = `Target ${activeMetricTargets.reb_zeta.toFixed(2)}`;
       document.getElementById('targetPortAreaText').textContent = `Target ${activeMetricTargets.port_area_mm2.toFixed(1)} mm2`;
       document.getElementById('targetCavMarginText').textContent = `Target >= ${activeMetricTargets.cav_margin_bar_min.toFixed(2)} bar`;
+      document.getElementById('sumTargetProfile').textContent = currentTargetProfileText();
+    }
+
+    function currentTargetProfileText(){
+      const profile = document.getElementById('targetProfile').value;
+      const riderLevel = document.getElementById('targetRiderLevel').value;
+      const profileLabel = PROFILE_LABELS[profile] || profile;
+      const riderLabel = RIDER_LEVEL_LABELS[riderLevel] || riderLevel;
+      return `${profileLabel} / ${riderLabel}`;
     }
 
     function persistTargets(profile, riderLevel){
@@ -917,6 +940,32 @@
       if (latestSimulationData){
         updateSummary(latestSimulationData);
       }
+    }
+
+    function saveTargetSyncPreference(){
+      const syncEl = document.getElementById('presetSyncTargets');
+      localStorage.setItem(TARGET_SYNC_STORAGE_KEY, syncEl.checked ? '1' : '0');
+    }
+
+    function loadTargetSyncPreference(){
+      const syncEl = document.getElementById('presetSyncTargets');
+      const raw = localStorage.getItem(TARGET_SYNC_STORAGE_KEY);
+      syncEl.checked = raw == null ? true : raw === '1';
+    }
+
+    function syncTargetsFromPreset(presetName){
+      const syncEl = document.getElementById('presetSyncTargets');
+      if (!syncEl.checked) return;
+      const hint = PRESET_TARGET_HINTS[presetName];
+      if (!hint) return;
+      const profileEl = document.getElementById('targetProfile');
+      const levelEl = document.getElementById('targetRiderLevel');
+      profileEl.value = hint.profile;
+      levelEl.value = hint.riderLevel;
+      activeMetricTargets = { ...resolveProfileTargets(hint.profile, hint.riderLevel) };
+      writeTargetInputs(activeMetricTargets);
+      persistTargets(hint.profile, hint.riderLevel);
+      applyCurrentTargetsToBadges();
     }
 
     function lockTargetsFromPanel(){
@@ -1396,6 +1445,7 @@
       document.getElementById('cavMargin').textContent = comp03.cavitation_margin_bar.toFixed(2);
       updateTargetBadges(comp03, data.summary);
       document.getElementById('sumPlatform').textContent = machine;
+      document.getElementById('sumTargetProfile').textContent = currentTargetProfileText();
       document.getElementById('sumPortArea').textContent = data.summary.total_port_area_mm2.toFixed(1) + ' mm2';
       document.getElementById('sumBaseMid').textContent = data.summary.base_port_area_mm2.toFixed(1) + ' / ' + data.summary.mid_port_area_mm2.toFixed(1) + ' mm2';
       document.getElementById('sumBleed').textContent = data.summary.bleed_area_mm2.toFixed(2) + ' / ' + data.summary.rebound_orifice_area_mm2.toFixed(2) + ' mm2';
@@ -1727,6 +1777,7 @@
         ...adjustedStacks,
         presetSelect: name,
       });
+      syncTargetsFromPreset(name);
       updateModeVisibility();
       setCrossoverChangeNote(lastCrossoverHint);
       updateAbCompareTag(latestSimulationData);
@@ -1749,6 +1800,7 @@
       if (paymentState.paid || paymentState.bypass) setLocked(false);
       else resetLockedOutputs();
       loadDemo();
+      loadTargetSyncPreference();
       loadTargetsFromStorage();
       updateCrossoverIntensityLabel();
       updateHelpFabState();
@@ -1841,6 +1893,7 @@
       persistTargets(profile, riderLevel);
       applyCurrentTargetsToBadges();
     });
+    document.getElementById('presetSyncTargets').addEventListener('change', saveTargetSyncPreference);
     document.getElementById('helpTourFab').addEventListener('click', () => {
       endIntroTour(false);
       showIntroChoiceOverlay();
