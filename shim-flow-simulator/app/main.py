@@ -318,6 +318,9 @@ def hsc_poppet_area_m2(inp: SimulationInput, delta_p_pa: float, direction: str) 
 
 def build_stages(inp: SimulationInput, direction: str) -> list[ValveStage]:
     machine = resolved_machine_type(inp)
+    # Use direction-appropriate shim stacks for each active stage.
+    base_stack = inp.base_valve_stack if direction == "compression" else inp.rebound_stack
+    mid_stack = inp.mid_valve_stack if direction == "compression" else inp.rebound_stack
     stages: list[ValveStage] = [
         ValveStage(
             name="piston",
@@ -335,7 +338,7 @@ def build_stages(inp: SimulationInput, direction: str) -> list[ValveStage]:
                 name="base",
                 port_count=inp.base_port_count,
                 port_diameter_mm=inp.base_port_diameter_mm,
-                stack=inp.base_valve_stack,
+                stack=base_stack,
                 area_multiplier=0.95,
                 hs_multiplier=1.08,
                 applies_direction="both",
@@ -347,10 +350,10 @@ def build_stages(inp: SimulationInput, direction: str) -> list[ValveStage]:
                 name="mid",
                 port_count=inp.mid_port_count,
                 port_diameter_mm=inp.mid_port_diameter_mm,
-                stack=inp.mid_valve_stack,
+                stack=mid_stack,
                 area_multiplier=0.90,
                 hs_multiplier=1.15,
-                applies_direction="compression",
+                applies_direction="both",
             )
         )
 
@@ -397,7 +400,10 @@ def stage_dynamic_area_m2(
         stage.hs_multiplier,
     )
     curtain = shim_curtain_area_m2(stage.port_count, stage.port_diameter_mm, lift)
-    effective_area = min(raw_port_area, raw_port_area * 0.07 + float_area + curtain)
+    # Keep only a small "closed" leakage area so shim opening remains meaningful
+    # at speed. A large fixed leakage makes lift/pressure graphs look unrealistically flat.
+    closed_leak_fraction = 0.008 if stage.name == "piston" else 0.010
+    effective_area = min(raw_port_area, raw_port_area * closed_leak_fraction + float_area + curtain)
     return max(effective_area, 1e-12), lift, {
         "float_area_m2": float_area,
         "trampoline_threshold_pa": trampoline_threshold_pa,
