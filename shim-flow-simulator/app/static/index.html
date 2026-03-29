@@ -65,8 +65,16 @@
     .lockable.locked .lock-overlay{display:flex}
     body.tour-readable .lockable.locked .lockable-content{filter:none;opacity:1;pointer-events:auto;user-select:auto}
     body.tour-readable .lockable.locked .lock-overlay{display:none}
-    body.tour-readable .intro-overlay{background:rgba(5,9,18,.22);backdrop-filter:none}
-    body.tour-readable .intro-choice-overlay{background:rgba(5,9,18,.30);backdrop-filter:none}
+    body.tour-readable .intro-overlay{
+      background:transparent;
+      backdrop-filter:none;
+      pointer-events:none;
+    }
+    body.tour-readable .intro-overlay .intro-card{pointer-events:auto}
+    body.tour-readable .intro-choice-overlay{background:rgba(5,9,18,.18);backdrop-filter:none}
+    body.tour-readable .intro-highlight{
+      box-shadow:0 0 0 3px rgba(88,166,255,.35), 0 0 22px rgba(88,166,255,.45)
+    }
     .viz{padding:0;overflow:hidden}
     .viz-top{display:flex;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
     .viz-wrap{padding:16px}
@@ -427,25 +435,71 @@
         </div>
 
         <div style="margin-top:10px">
-          <label>Compression stack (dia,thk,qty per line)</label>
-          <textarea id="compression_stack" rows="3">24,0.15,6
+          <label>Compression stack (spreadsheet input)</label>
+          <div class="shim-editor-wrap">
+            <div class="shim-editor">
+              <div class="hd">Dia</div><div class="hd">Thk</div><div class="hd">Qty</div>
+              <div class="row"><input id="compression_stack_r1_d" type="number" step="0.1" value="24"><input id="compression_stack_r1_t" type="number" step="0.01" value="0.15"><input id="compression_stack_r1_q" type="number" step="1" value="6"></div>
+              <div class="row"><input id="compression_stack_r2_d" type="number" step="0.1" value="22"><input id="compression_stack_r2_t" type="number" step="0.01" value="0.15"><input id="compression_stack_r2_q" type="number" step="1" value="2"></div>
+              <div class="row"><input id="compression_stack_r3_d" type="number" step="0.1" value="20"><input id="compression_stack_r3_t" type="number" step="0.01" value="0.10"><input id="compression_stack_r3_q" type="number" step="1" value="1"></div>
+              <div class="row"><input id="compression_stack_r4_d" type="number" step="0.1"><input id="compression_stack_r4_t" type="number" step="0.01"><input id="compression_stack_r4_q" type="number" step="1"></div>
+              <div class="row"><input id="compression_stack_r5_d" type="number" step="0.1"><input id="compression_stack_r5_t" type="number" step="0.01"><input id="compression_stack_r5_q" type="number" step="1"></div>
+              <div class="row"><input id="compression_stack_r6_d" type="number" step="0.1"><input id="compression_stack_r6_t" type="number" step="0.01"><input id="compression_stack_r6_q" type="number" step="1"></div>
+            </div>
+            <div class="shim-editor-note">Excel-style: Enter/Tab/comma auto-advance to next cell. Hidden raw field kept for compatibility.</div>
+          </div>
+          <textarea id="compression_stack" rows="3" style="display:none">24,0.15,6
 22,0.15,2
 20,0.10,1</textarea>
         </div>
         <div style="margin-top:8px">
-          <label>Rebound stack</label>
-          <textarea id="rebound_stack" rows="3">22,0.15,5
+          <label>Rebound stack (spreadsheet input)</label>
+          <div class="shim-editor-wrap">
+            <div class="shim-editor">
+              <div class="hd">Dia</div><div class="hd">Thk</div><div class="hd">Qty</div>
+              <div class="row"><input id="rebound_stack_r1_d" type="number" step="0.1" value="22"><input id="rebound_stack_r1_t" type="number" step="0.01" value="0.15"><input id="rebound_stack_r1_q" type="number" step="1" value="5"></div>
+              <div class="row"><input id="rebound_stack_r2_d" type="number" step="0.1" value="20"><input id="rebound_stack_r2_t" type="number" step="0.01" value="0.15"><input id="rebound_stack_r2_q" type="number" step="1" value="2"></div>
+              <div class="row"><input id="rebound_stack_r3_d" type="number" step="0.1" value="18"><input id="rebound_stack_r3_t" type="number" step="0.01" value="0.10"><input id="rebound_stack_r3_q" type="number" step="1" value="1"></div>
+              <div class="row"><input id="rebound_stack_r4_d" type="number" step="0.1"><input id="rebound_stack_r4_t" type="number" step="0.01"><input id="rebound_stack_r4_q" type="number" step="1"></div>
+              <div class="row"><input id="rebound_stack_r5_d" type="number" step="0.1"><input id="rebound_stack_r5_t" type="number" step="0.01"><input id="rebound_stack_r5_q" type="number" step="1"></div>
+              <div class="row"><input id="rebound_stack_r6_d" type="number" step="0.1"><input id="rebound_stack_r6_t" type="number" step="0.01"><input id="rebound_stack_r6_q" type="number" step="1"></div>
+            </div>
+            <div class="shim-editor-note">Same spreadsheet behavior as compression.</div>
+          </div>
+          <textarea id="rebound_stack" rows="3" style="display:none">22,0.15,5
 20,0.15,2
 18,0.10,1</textarea>
         </div>
         <div style="margin-top:8px">
-          <label>Base valve stack</label>
-          <textarea id="base_valve_stack" rows="2">22,0.15,4
+          <label>Base valve stack (spreadsheet input)</label>
+          <div class="shim-editor-wrap">
+            <div class="shim-editor">
+              <div class="hd">Dia</div><div class="hd">Thk</div><div class="hd">Qty</div>
+              <div class="row"><input id="base_valve_stack_r1_d" type="number" step="0.1" value="22"><input id="base_valve_stack_r1_t" type="number" step="0.01" value="0.15"><input id="base_valve_stack_r1_q" type="number" step="1" value="4"></div>
+              <div class="row"><input id="base_valve_stack_r2_d" type="number" step="0.1" value="20"><input id="base_valve_stack_r2_t" type="number" step="0.01" value="0.15"><input id="base_valve_stack_r2_q" type="number" step="1" value="2"></div>
+              <div class="row"><input id="base_valve_stack_r3_d" type="number" step="0.1"><input id="base_valve_stack_r3_t" type="number" step="0.01"><input id="base_valve_stack_r3_q" type="number" step="1"></div>
+              <div class="row"><input id="base_valve_stack_r4_d" type="number" step="0.1"><input id="base_valve_stack_r4_t" type="number" step="0.01"><input id="base_valve_stack_r4_q" type="number" step="1"></div>
+              <div class="row"><input id="base_valve_stack_r5_d" type="number" step="0.1"><input id="base_valve_stack_r5_t" type="number" step="0.01"><input id="base_valve_stack_r5_q" type="number" step="1"></div>
+              <div class="row"><input id="base_valve_stack_r6_d" type="number" step="0.1"><input id="base_valve_stack_r6_t" type="number" step="0.01"><input id="base_valve_stack_r6_q" type="number" step="1"></div>
+            </div>
+          </div>
+          <textarea id="base_valve_stack" rows="2" style="display:none">22,0.15,4
 20,0.15,2</textarea>
         </div>
         <div style="margin-top:8px">
-          <label>Mid valve stack</label>
-          <textarea id="mid_valve_stack" rows="2">20,0.10,3
+          <label>Mid valve stack (spreadsheet input)</label>
+          <div class="shim-editor-wrap">
+            <div class="shim-editor">
+              <div class="hd">Dia</div><div class="hd">Thk</div><div class="hd">Qty</div>
+              <div class="row"><input id="mid_valve_stack_r1_d" type="number" step="0.1" value="20"><input id="mid_valve_stack_r1_t" type="number" step="0.01" value="0.10"><input id="mid_valve_stack_r1_q" type="number" step="1" value="3"></div>
+              <div class="row"><input id="mid_valve_stack_r2_d" type="number" step="0.1" value="18"><input id="mid_valve_stack_r2_t" type="number" step="0.01" value="0.10"><input id="mid_valve_stack_r2_q" type="number" step="1" value="2"></div>
+              <div class="row"><input id="mid_valve_stack_r3_d" type="number" step="0.1"><input id="mid_valve_stack_r3_t" type="number" step="0.01"><input id="mid_valve_stack_r3_q" type="number" step="1"></div>
+              <div class="row"><input id="mid_valve_stack_r4_d" type="number" step="0.1"><input id="mid_valve_stack_r4_t" type="number" step="0.01"><input id="mid_valve_stack_r4_q" type="number" step="1"></div>
+              <div class="row"><input id="mid_valve_stack_r5_d" type="number" step="0.1"><input id="mid_valve_stack_r5_t" type="number" step="0.01"><input id="mid_valve_stack_r5_q" type="number" step="1"></div>
+              <div class="row"><input id="mid_valve_stack_r6_d" type="number" step="0.1"><input id="mid_valve_stack_r6_t" type="number" step="0.01"><input id="mid_valve_stack_r6_q" type="number" step="1"></div>
+            </div>
+          </div>
+          <textarea id="mid_valve_stack" rows="2" style="display:none">20,0.10,3
 18,0.10,2</textarea>
         </div>
 
@@ -1234,6 +1288,51 @@
         .filter(r => Number.isFinite(r.diameter_mm) && Number.isFinite(r.thickness_mm) && Number.isFinite(r.qty));
     }
 
+    function syncShimRowsToHiddenText(prefix){
+      const rows = [];
+      for (let i = 1; i <= 6; i += 1){
+        const dEl = document.getElementById(`${prefix}_r${i}_d`);
+        const tEl = document.getElementById(`${prefix}_r${i}_t`);
+        const qEl = document.getElementById(`${prefix}_r${i}_q`);
+        if (!dEl || !tEl || !qEl) continue;
+        const d = Number(dEl.value);
+        const t = Number(tEl.value);
+        const q = Number(qEl.value);
+        if (!Number.isFinite(d) || !Number.isFinite(t) || !Number.isFinite(q)) continue;
+        if (d <= 0 || t <= 0 || q <= 0) continue;
+        rows.push(`${d},${t},${Math.max(1, Math.round(q))}`);
+      }
+      const ta = document.getElementById(prefix);
+      if (ta) ta.value = rows.join('\n');
+    }
+
+    function syncAllShimRowsToHiddenText(){
+      ['compression_stack','rebound_stack','base_valve_stack','mid_valve_stack'].forEach(syncShimRowsToHiddenText);
+    }
+
+    function hydrateShimRowsFromHiddenText(prefix){
+      const ta = document.getElementById(prefix);
+      if (!ta) return;
+      const rows = String(ta.value || '').trim().split(/\n+/).filter(Boolean).map((line) => {
+        const [d, t, q] = String(line).split(/[,\t]/).map(v => Number(String(v).trim()));
+        return [d, t, q];
+      });
+      for (let i = 1; i <= 6; i += 1){
+        const dEl = document.getElementById(`${prefix}_r${i}_d`);
+        const tEl = document.getElementById(`${prefix}_r${i}_t`);
+        const qEl = document.getElementById(`${prefix}_r${i}_q`);
+        if (!dEl || !tEl || !qEl) continue;
+        const r = rows[i - 1];
+        dEl.value = r && Number.isFinite(r[0]) ? String(r[0]) : '';
+        tEl.value = r && Number.isFinite(r[1]) ? String(r[1]) : '';
+        qEl.value = r && Number.isFinite(r[2]) ? String(Math.max(1, Math.round(r[2]))) : '';
+      }
+    }
+
+    function hydrateAllShimRowsFromHiddenText(){
+      ['compression_stack','rebound_stack','base_valve_stack','mid_valve_stack'].forEach(hydrateShimRowsFromHiddenText);
+    }
+
     function payloadFromForm(){
       const numericIds = [
         'piston_diameter_mm','shaft_diameter_mm','port_count','port_diameter_mm','base_port_count','base_port_diameter_mm',
@@ -1556,6 +1655,72 @@
       simulate();
     }
 
+    function syncShimTableToTextarea(stackId){
+      const lines = [];
+      for (let r = 1; r <= 6; r += 1){
+        const dEl = document.getElementById(`${stackId}_r${r}_d`);
+        const tEl = document.getElementById(`${stackId}_r${r}_t`);
+        const qEl = document.getElementById(`${stackId}_r${r}_q`);
+        if (!dEl || !tEl || !qEl) continue;
+        const d = String(dEl.value || '').trim();
+        const t = String(tEl.value || '').trim();
+        const q = String(qEl.value || '').trim();
+        if (!d && !t && !q) continue;
+        lines.push(`${d},${t},${q}`);
+      }
+      const ta = document.getElementById(stackId);
+      if (ta) ta.value = lines.join('\n');
+    }
+
+    function hydrateShimTableFromTextarea(stackId){
+      const ta = document.getElementById(stackId);
+      if (!ta) return;
+      const rows = String(ta.value || '').trim().split(/\n+/).filter(Boolean).slice(0, 6);
+      for (let r = 1; r <= 6; r += 1){
+        const dEl = document.getElementById(`${stackId}_r${r}_d`);
+        const tEl = document.getElementById(`${stackId}_r${r}_t`);
+        const qEl = document.getElementById(`${stackId}_r${r}_q`);
+        if (!dEl || !tEl || !qEl) continue;
+        const src = rows[r - 1] || '';
+        const parts = src.split(/[,\t]/).map(v => String(v).trim());
+        dEl.value = parts[0] || '';
+        tEl.value = parts[1] || '';
+        qEl.value = parts[2] || '';
+      }
+    }
+
+    function wireShimTableKeyboard(stackId){
+      const fields = [];
+      for (let r = 1; r <= 6; r += 1){
+        for (let c of ['d','t','q']){
+          const el = document.getElementById(`${stackId}_r${r}_${c}`);
+          if (el) fields.push(el);
+        }
+      }
+      fields.forEach((el, idx) => {
+        el.addEventListener('input', () => syncShimTableToTextarea(stackId));
+        el.addEventListener('keydown', (e) => {
+          const k = e.key;
+          const fwd = k === 'Enter' || k === 'Tab' || k === ',' || k === ';';
+          const back = k === 'ArrowLeft' || (k === 'Tab' && e.shiftKey);
+          if (!fwd && !back) return;
+          e.preventDefault();
+          const next = back ? Math.max(0, idx - 1) : Math.min(fields.length - 1, idx + 1);
+          fields[next].focus();
+          fields[next].select?.();
+          syncShimTableToTextarea(stackId);
+        });
+      });
+      syncShimTableToTextarea(stackId);
+    }
+
+    function initShimSpreadsheetTables(){
+      for (const id of ['compression_stack','rebound_stack','base_valve_stack','mid_valve_stack']){
+        hydrateShimTableFromTextarea(id);
+        wireShimTableKeyboard(id);
+      }
+    }
+
     function setFormValues(values){
       for (const [id, value] of Object.entries(values)){
         const el = document.getElementById(id);
@@ -1566,80 +1731,9 @@
           el.value = String(value);
         }
       }
-    }
-
-    function normalizeShimCell(value, col){
-      const raw = String(value || '').trim();
-      if (!raw) return '';
-      const n = Number(raw);
-      if (!Number.isFinite(n)) return raw;
-      if (col === 0) return String(Math.max(0, Math.round(n)));
-      if (col === 1) return Number(Math.max(0, n).toFixed(2)).toString();
-      return String(Math.max(1, Math.round(n)));
-    }
-
-    function attachSpreadsheetEditor(textareaId){
-      const ta = document.getElementById(textareaId);
-      if (!ta) return;
-      ta.spellcheck = false;
-      ta.wrap = 'off';
-      ta.addEventListener('keydown', (e) => {
-        const key = e.key;
-        const navForward = key === 'Tab' || key === 'Enter' || key === ',' || key === ';';
-        if (!navForward) return;
-        e.preventDefault();
-
-        const val = ta.value;
-        const start = ta.selectionStart;
-        const end = ta.selectionEnd;
-        const before = val.slice(0, start);
-        const after = val.slice(end);
-        const lineStart = before.lastIndexOf('\n') + 1;
-        const lineEndRel = after.indexOf('\n');
-        const lineEnd = lineEndRel >= 0 ? end + lineEndRel : val.length;
-        const line = val.slice(lineStart, lineEnd);
-        const row = line.split(/[,\t]/).map(s => s.trim());
-
-        let col = 0;
-        for (let i = lineStart; i < start; i += 1){
-          const ch = val[i];
-          if (ch === ',' || ch === '\t') col += 1;
-        }
-        col = Math.min(Math.max(col, 0), 2);
-
-        while (row.length < 3) row.push('');
-        row[col] = normalizeShimCell(row[col], col);
-        const sep = ',';
-        const normalizedLine = row.join(sep);
-        ta.value = val.slice(0, lineStart) + normalizedLine + val.slice(lineEnd);
-
-        const nextCol = col + 1;
-        if (nextCol <= 2){
-          let pos = lineStart;
-          for (let i = 0; i < nextCol; i += 1){
-            const idx = ta.value.indexOf(',', pos);
-            pos = idx >= 0 ? idx + 1 : ta.value.length;
-          }
-          while (pos < ta.value.length && ta.value[pos] === ' ') pos += 1;
-          ta.selectionStart = ta.selectionEnd = pos;
-          return;
-        }
-
-        const newLineStart = ta.value.indexOf('\n', lineStart);
-        if (newLineStart === -1){
-          ta.value += '\n,,';
-          ta.selectionStart = ta.selectionEnd = ta.value.length - 2;
-          return;
-        }
-        const nextLineStart = newLineStart + 1;
-        const nextLineEnd = ta.value.indexOf('\n', nextLineStart);
-        const endIdx = nextLineEnd >= 0 ? nextLineEnd : ta.value.length;
-        const nextLine = ta.value.slice(nextLineStart, endIdx);
-        if (!nextLine.trim()){
-          ta.value = ta.value.slice(0, nextLineStart) + ',,' + ta.value.slice(endIdx);
-        }
-        ta.selectionStart = ta.selectionEnd = nextLineStart;
-      });
+      for (const id of ['compression_stack','rebound_stack','base_valve_stack','mid_valve_stack']){
+        hydrateShimTableFromTextarea(id);
+      }
     }
 
     function crossoverIntensityValue(){
