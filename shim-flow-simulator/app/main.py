@@ -318,9 +318,11 @@ def hsc_poppet_area_m2(inp: SimulationInput, delta_p_pa: float, direction: str) 
 
 def build_stages(inp: SimulationInput, direction: str) -> list[ValveStage]:
     machine = resolved_machine_type(inp)
-    # Use direction-appropriate shim stacks for each active stage.
-    base_stack = inp.base_valve_stack if direction == "compression" else inp.rebound_stack
-    mid_stack = inp.mid_valve_stack if direction == "compression" else inp.rebound_stack
+    # Keep stage routing conservative and predictable:
+    # - piston stage carries direction-specific piston stack
+    # - base stage uses base stack (both directions in this MVP network)
+    # - mid stage is compression-only for cartridge behavior
+    base_stack = inp.base_valve_stack
     stages: list[ValveStage] = [
         ValveStage(
             name="piston",
@@ -350,10 +352,10 @@ def build_stages(inp: SimulationInput, direction: str) -> list[ValveStage]:
                 name="mid",
                 port_count=inp.mid_port_count,
                 port_diameter_mm=inp.mid_port_diameter_mm,
-                stack=mid_stack,
+                stack=inp.mid_valve_stack,
                 area_multiplier=0.90,
                 hs_multiplier=1.15,
-                applies_direction="both",
+                applies_direction="compression",
             )
         )
 
@@ -412,7 +414,13 @@ def stage_dynamic_area_m2(
 
 
 def solve_series_flow_for_dp(
-    inp: SimulationInput, stages: list[ValveStage], target_dp_pa: float, cd: float, rho: float, direction: str
+    inp: SimulationInput,
+    stages: list[ValveStage],
+    target_dp_pa: float,
+    cd: float,
+    rho: float,
+    direction: str,
+    q_upper_hint: float | None = None,
 ) -> tuple[float, list[dict]]:
     def series_dp_for_q(q_guess: float) -> tuple[float, list[dict]]:
         total_dp = 0.0
@@ -444,6 +452,8 @@ def solve_series_flow_for_dp(
 
     max_area = sum(round_port_area_m2(s.port_count, s.port_diameter_mm) * s.area_multiplier for s in stages)
     q_hi = flow_from_delta_p_pa(target_dp_pa, max(max_area, 1e-12), cd, rho)
+    if q_upper_hint is not None and q_upper_hint > 0:
+        q_hi = min(q_hi, q_upper_hint * 1.15)
     lo, hi = 0.0, max(q_hi * 2.2, 1e-8)
     best_stage_data: list[dict] = []
     for _ in range(42):
@@ -492,7 +502,7 @@ def solve_velocity_point(inp: SimulationInput, v_m_s: float, direction: str) -> 
         hsc_area = hsc_poppet_area_m2(inp, dp, direction)
         bypass_area = bypass_base_area + hsc_area
         q_bypass = flow_from_delta_p_pa(dp, bypass_area, cd, rho)
-        q_shim, stage_data = solve_series_flow_for_dp(inp, stages, dp, cd, rho, direction)
+        q_shim, stage_data = solve_series_flow_for_dp(inp, stages, dp, cd, rho, direction, q_required)
         q_total = q_bypass + q_shim
 
         converged_stage_data = stage_data

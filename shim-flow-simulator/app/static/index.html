@@ -65,7 +65,12 @@
     .lockable.locked .lock-overlay{display:flex}
     body.tour-readable .lockable.locked .lockable-content{filter:none;opacity:1;pointer-events:auto;user-select:auto}
     body.tour-readable .lockable.locked .lock-overlay{display:none}
-    body.tour-readable .intro-overlay{background:transparent;backdrop-filter:none}
+    body.tour-readable .intro-overlay{
+      background:transparent;
+      backdrop-filter:none;
+      pointer-events:none;
+    }
+    body.tour-readable .intro-overlay .intro-card{pointer-events:auto}
     body.tour-readable .intro-choice-overlay{background:rgba(5,9,18,.18);backdrop-filter:none}
     body.tour-readable .intro-highlight{
       box-shadow:0 0 0 3px rgba(88,166,255,.35), 0 0 22px rgba(88,166,255,.45)
@@ -1650,6 +1655,72 @@
       simulate();
     }
 
+    function syncShimTableToTextarea(stackId){
+      const lines = [];
+      for (let r = 1; r <= 6; r += 1){
+        const dEl = document.getElementById(`${stackId}_r${r}_d`);
+        const tEl = document.getElementById(`${stackId}_r${r}_t`);
+        const qEl = document.getElementById(`${stackId}_r${r}_q`);
+        if (!dEl || !tEl || !qEl) continue;
+        const d = String(dEl.value || '').trim();
+        const t = String(tEl.value || '').trim();
+        const q = String(qEl.value || '').trim();
+        if (!d && !t && !q) continue;
+        lines.push(`${d},${t},${q}`);
+      }
+      const ta = document.getElementById(stackId);
+      if (ta) ta.value = lines.join('\n');
+    }
+
+    function hydrateShimTableFromTextarea(stackId){
+      const ta = document.getElementById(stackId);
+      if (!ta) return;
+      const rows = String(ta.value || '').trim().split(/\n+/).filter(Boolean).slice(0, 6);
+      for (let r = 1; r <= 6; r += 1){
+        const dEl = document.getElementById(`${stackId}_r${r}_d`);
+        const tEl = document.getElementById(`${stackId}_r${r}_t`);
+        const qEl = document.getElementById(`${stackId}_r${r}_q`);
+        if (!dEl || !tEl || !qEl) continue;
+        const src = rows[r - 1] || '';
+        const parts = src.split(/[,\t]/).map(v => String(v).trim());
+        dEl.value = parts[0] || '';
+        tEl.value = parts[1] || '';
+        qEl.value = parts[2] || '';
+      }
+    }
+
+    function wireShimTableKeyboard(stackId){
+      const fields = [];
+      for (let r = 1; r <= 6; r += 1){
+        for (let c of ['d','t','q']){
+          const el = document.getElementById(`${stackId}_r${r}_${c}`);
+          if (el) fields.push(el);
+        }
+      }
+      fields.forEach((el, idx) => {
+        el.addEventListener('input', () => syncShimTableToTextarea(stackId));
+        el.addEventListener('keydown', (e) => {
+          const k = e.key;
+          const fwd = k === 'Enter' || k === 'Tab' || k === ',' || k === ';';
+          const back = k === 'ArrowLeft' || (k === 'Tab' && e.shiftKey);
+          if (!fwd && !back) return;
+          e.preventDefault();
+          const next = back ? Math.max(0, idx - 1) : Math.min(fields.length - 1, idx + 1);
+          fields[next].focus();
+          fields[next].select?.();
+          syncShimTableToTextarea(stackId);
+        });
+      });
+      syncShimTableToTextarea(stackId);
+    }
+
+    function initShimSpreadsheetTables(){
+      for (const id of ['compression_stack','rebound_stack','base_valve_stack','mid_valve_stack']){
+        hydrateShimTableFromTextarea(id);
+        wireShimTableKeyboard(id);
+      }
+    }
+
     function setFormValues(values){
       for (const [id, value] of Object.entries(values)){
         const el = document.getElementById(id);
@@ -1660,80 +1731,9 @@
           el.value = String(value);
         }
       }
-    }
-
-    function normalizeShimCell(value, col){
-      const raw = String(value || '').trim();
-      if (!raw) return '';
-      const n = Number(raw);
-      if (!Number.isFinite(n)) return raw;
-      if (col === 0) return String(Math.max(0, Math.round(n)));
-      if (col === 1) return Number(Math.max(0, n).toFixed(2)).toString();
-      return String(Math.max(1, Math.round(n)));
-    }
-
-    function attachSpreadsheetEditor(textareaId){
-      const ta = document.getElementById(textareaId);
-      if (!ta) return;
-      ta.spellcheck = false;
-      ta.wrap = 'off';
-      ta.addEventListener('keydown', (e) => {
-        const key = e.key;
-        const navForward = key === 'Tab' || key === 'Enter' || key === ',' || key === ';';
-        if (!navForward) return;
-        e.preventDefault();
-
-        const val = ta.value;
-        const start = ta.selectionStart;
-        const end = ta.selectionEnd;
-        const before = val.slice(0, start);
-        const after = val.slice(end);
-        const lineStart = before.lastIndexOf('\n') + 1;
-        const lineEndRel = after.indexOf('\n');
-        const lineEnd = lineEndRel >= 0 ? end + lineEndRel : val.length;
-        const line = val.slice(lineStart, lineEnd);
-        const row = line.split(/[,\t]/).map(s => s.trim());
-
-        let col = 0;
-        for (let i = lineStart; i < start; i += 1){
-          const ch = val[i];
-          if (ch === ',' || ch === '\t') col += 1;
-        }
-        col = Math.min(Math.max(col, 0), 2);
-
-        while (row.length < 3) row.push('');
-        row[col] = normalizeShimCell(row[col], col);
-        const sep = ',';
-        const normalizedLine = row.join(sep);
-        ta.value = val.slice(0, lineStart) + normalizedLine + val.slice(lineEnd);
-
-        const nextCol = col + 1;
-        if (nextCol <= 2){
-          let pos = lineStart;
-          for (let i = 0; i < nextCol; i += 1){
-            const idx = ta.value.indexOf(',', pos);
-            pos = idx >= 0 ? idx + 1 : ta.value.length;
-          }
-          while (pos < ta.value.length && ta.value[pos] === ' ') pos += 1;
-          ta.selectionStart = ta.selectionEnd = pos;
-          return;
-        }
-
-        const newLineStart = ta.value.indexOf('\n', lineStart);
-        if (newLineStart === -1){
-          ta.value += '\n,,';
-          ta.selectionStart = ta.selectionEnd = ta.value.length - 2;
-          return;
-        }
-        const nextLineStart = newLineStart + 1;
-        const nextLineEnd = ta.value.indexOf('\n', nextLineStart);
-        const endIdx = nextLineEnd >= 0 ? nextLineEnd : ta.value.length;
-        const nextLine = ta.value.slice(nextLineStart, endIdx);
-        if (!nextLine.trim()){
-          ta.value = ta.value.slice(0, nextLineStart) + ',,' + ta.value.slice(endIdx);
-        }
-        ta.selectionStart = ta.selectionEnd = nextLineStart;
-      });
+      for (const id of ['compression_stack','rebound_stack','base_valve_stack','mid_valve_stack']){
+        hydrateShimTableFromTextarea(id);
+      }
     }
 
     function crossoverIntensityValue(){
